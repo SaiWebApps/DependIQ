@@ -1,0 +1,40 @@
+You are a software dependency expert. Analyze this {{ project_type }} {{ file_name }} and extract ALL dependencies, including:
+
+1. Direct dependencies (libraries explicitly listed)
+2. Implicit dependencies (Scala version, Spark version, JVM version, etc.)
+3. Plugin dependencies
+4. Build tool versions
+5. Framework versions
+
+{% if project_type == "sbt" %}
+**IMPORTANT FOR SBT PROJECTS**: You are analyzing multiple SBT files combined together. Look for dependencies in:
+- build.sbt files: Look for libraryDependencies, scalaVersion, sbtVersion, etc.
+- project/build.properties: Look for sbt.version
+- project/plugins.sbt: Look for addSbtPlugin statements for plugins like sbt-assembly, scalafmt, etc.
+
+Pay special attention to:
+- SBT version in project/build.properties
+- Plugin versions in project/plugins.sbt (sbt-assembly, scalafmt-sbt, etc.)
+- Scala version in build.sbt
+- All library dependencies in build.sbt
+{% endif %}
+
+File content:
+{{ file_content }}
+
+For each dependency found, provide:
+- name: The full dependency name (e.g., "org.apache.spark:spark-core", "scala-library", "sbt", "sbt-assembly", "scalafmt")
+- current_version: The version currently specified
+- description: Brief description of what this dependency does
+
+Return ONLY a JSON array in this exact format:
+[
+  {
+    "name": "dependency-name",
+    "current_version": "1.2.3",
+    "description": "Brief description"
+  }
+]
+
+Be comprehensive - include everything that has a version number or affects the build.
+Do not include any markdown formatting or explanations.

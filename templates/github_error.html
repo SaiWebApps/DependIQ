@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>GitHub Authentication Error - DependIQ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+    <link rel="manifest" href="/images/site.webmanifest">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="/static/js/theme.js"></script>
+    <link rel="stylesheet" href="/static/css/main.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="hero-section">
+            <h1 class="hero-title">
+                ⚠️ Authentication Error
+                <span class="ai-badge">GitHub Integration</span>
+            </h1>
+            <p class="hero-subtitle">
+                There was a problem connecting to your GitHub account
+            </p>
+        </div>
+
+        <div class="content-section">
+            <div style="text-align: center; padding: 40px;">
+                <div
+                    style="background: #fff3e0; border: 2px solid #ff9800; border-radius: 16px; padding: 40px; margin-bottom: 32px;">
+                    <span class="material-icons"
+                        style="font-size: 4rem; color: #f57c00; margin-bottom: 20px;">error</span>
+
+                    <h2 style="color: #f57c00; margin: 0 0 16px 0; font-size: 1.5rem;">{{ error }}</h2>
+
+                    <p style="color: #666; margin: 0 0 24px 0; font-size: 1rem; line-height: 1.5;">
+                        {{ error_description }}
+                    </p>
+
+                    <div style="margin-top: 32px;">
+                        <p style="color: #666; font-size: 0.9rem; margin-bottom: 24px;">
+                            This might be due to:
+                        </p>
+                        <ul
+                            style="text-align: left; color: #666; font-size: 0.9rem; max-width: 400px; margin: 0 auto 32px auto;">
+                            <li>Cancelling the GitHub authorization</li>
+                            <li>Network connectivity issues</li>
+                            <li>Temporary GitHub service problems</li>
+                            <li>Invalid or expired authentication session</li>
+                            <li>Missing GitHub OAuth configuration</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+                    <a href="/auth/github" class="github-auth-btn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 8px;">
+                            <path
+                                d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+                        </svg>
+                        Try Again
+                    </a>
+
+                    <a href="/" class="nav-btn">
+                        <span class="material-icons">home</span>
+                        Back to Home
+                    </a>
+                </div>
+
+                <div style="margin-top: 32px; padding: 24px; background: #f8f9fa; border-radius: 12px;">
+                    <h3 style="color: #1976d2; margin: 0 0 16px 0; font-size: 1.1rem;">
+                        <span class="material-icons" style="vertical-align: middle; margin-right: 8px;">help</span>
+                        Need Help?
+                    </h3>
+                    <p style="color: #666; margin: 0; font-size: 0.9rem; line-height: 1.5;">
+                        If this problem persists, the GitHub OAuth integration may not be properly configured.
+                        Please ensure that the <code>GITHUB_CLIENT_ID</code> and <code>GITHUB_CLIENT_SECRET</code>
+                        environment variables are set correctly.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

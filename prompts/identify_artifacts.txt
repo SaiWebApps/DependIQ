@@ -1,0 +1,23 @@
+You are a software project expert. Analyze this {{ project_type }} project structure and identify ALL artifact/build/cache directories and files that should be excluded from source control and dependency analysis.
+
+PROJECT STRUCTURE SAMPLE:
+Directories: {{ directory_list }}
+Files: {{ structure_summary }}
+
+IDENTIFY FOR EXCLUSION:
+1. Build artifacts (compiled code, generated files)
+2. IDE/Editor files (.metals/, .bsp/, .idea/, .vscode/, .settings/)
+3. Dependency caches (node_modules/, .gradle/, __pycache__/)
+4. OS files (.DS_Store, Thumbs.db)
+5. Log files, temp files, backup files
+6. Package manager lock files and caches
+7. Documentation builds, dist folders
+
+Return a JSON object with:
+{
+  "exclude_directories": ["dir1", "dir2", ...],
+  "exclude_file_patterns": ["*.class", "*.jar", "*.log", ...],
+  "reasoning": "Brief explanation of what you excluded and why"
+}
+
+Be comprehensive but don't exclude source code, configuration files, or build definitions (build.sbt, pom.xml, etc.).

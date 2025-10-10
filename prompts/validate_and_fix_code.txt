@@ -1,0 +1,22 @@
+Analyze this {{ project_type }} project after dependency updates and fix any compatibility issues.
+
+Dependency changes:
+{{ changes }}
+
+Source files:
+{{ files_content }}
+
+Tasks:
+1. Identify breaking changes from version updates
+2. Fix deprecated API calls
+3. Update import statements
+4. Fix compilation errors
+5. Update configuration if needed
+
+Return a JSON object with only the files that need changes:
+{
+  "file_path": "updated_file_content"
+}
+
+If no changes are needed, return: {}
+Do not include markdown formatting.

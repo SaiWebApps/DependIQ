@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>AI Project Update - Progress</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="manifest" href="/images/site.webmanifest">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="/static/js/theme.js"></script>
+  <link rel="stylesheet" href="/static/css/main.css">
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>
+        <span class="material-icons"
+          style="vertical-align: middle; margin-right: 12px; font-size: 2rem;">settings</span>
+        AI Project Update
+        <span class="ai-badge">In Progress</span>
+      </h1>
+    </div>
+
+    <div class="content">
+      <div class="progress-container">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+        </div>
+        <div class="progress-text" id="progressText">0% - Initializing...</div>
+      </div>
+
+      <div class="step-details" id="stepDetails">
+        <div class="spinner"></div>
+        <h4>
+          <span class="material-icons status-icon">pending</span>
+          Preparing to update your project...
+        </h4>
+        <p>The AI system is analyzing your dependencies and preparing compatibility updates.</p>
+      </div>
+
+      <div id="downloadSection" style="display: none;" class="download-section">
+        <h3 style="color: #2e7d32; margin-top: 0;">
+          <span class="material-icons" style="vertical-align: middle; margin-right: 8px;">check_circle</span>
+          Update Complete!
+        </h3>
+        <p style="color: #2e7d32; margin-bottom: 24px;">Your project has been successfully updated with the latest
+          dependencies and compatible code changes.</p>
+        <a href="/download/{{ session_id }}" class="download-btn">
+          <span class="material-icons">download</span>
+          Download Updated Project
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/progress.js"></script>
+</body>
+
+</html>

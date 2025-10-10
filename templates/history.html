@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project History - DependIQ</title>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+    <link rel="manifest" href="/images/site.webmanifest">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: #1a202c;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+
+        .content-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .filters {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #e2e8f0;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .filter-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .projects-list {
+            display: grid;
+            gap: 16px;
+        }
+
+        .project-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .project-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .project-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 12px;
+        }
+
+        .project-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 4px;
+        }
+
+        .project-meta {
+            display: flex;
+            gap: 16px;
+            color: #718096;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+
+        .project-meta span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-updated {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .status-processing {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .project-stats {
+            display: flex;
+            gap: 24px;
+            padding-top: 12px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .stat {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a202c;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .empty-state .material-icons {
+            font-size: 64px;
+            color: #cbd5e0;
+            margin-bottom: 16px;
+        }
+
+        .empty-state h3 {
+            font-size: 20px;
+            color: #4a5568;
+            margin-bottom: 8px;
+        }
+
+        .empty-state p {
+            color: #718096;
+            margin-bottom: 24px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #718096;
+        }
+
+        .loading .material-icons {
+            font-size: 48px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error-message {
+            background: #fee;
+            border: 1px solid #fcc;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            color: #c33;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <span class="material-icons">history</span>
+                Project History
+            </h1>
+            <div class="header-actions">
+                <a href="/" class="btn btn-secondary">
+                    <span class="material-icons">home</span>
+                    Home
+                </a>
+                <a href="/profile" class="btn btn-secondary">
+                    <span class="material-icons">account_circle</span>
+                    Profile
+                </a>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <div class="filters">
+                <button class="filter-btn active" data-filter="all">All Projects</button>
+                <button class="filter-btn" data-filter="completed">Completed</button>
+                <button class="filter-btn" data-filter="updated">Updated</button>
+                <button class="filter-btn" data-filter="processing">Processing</button>
+                <button class="filter-btn" data-filter="failed">Failed</button>
+            </div>
+
+            <div id="error-container"></div>
+            <div id="loading-container" class="loading">
+                <div class="material-icons">autorenew</div>
+                <p>Loading your project history...</p>
+            </div>
+            <div id="projects-container" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        let allProjects = [];
+        let currentFilter = 'all';
+
+        // Load project history
+        async function loadHistory() {
+            try {
+                const token = localStorage.getItem('access_token');
+                if (!token) {
+                    window.location.href = '/login?redirect=/history';
+                    return;
+                }
+
+                const response = await fetch('/api/user/projects', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.status === 401) {
+                    localStorage.removeItem('access_token');
+                    window.location.href = '/login?redirect=/history';
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error('Failed to load project history');
+                }
+
+                const data = await response.json();
+                allProjects = data.projects || [];
+
+                document.getElementById('loading-container').style.display = 'none';
+                document.getElementById('projects-container').style.display = 'block';
+
+                renderProjects();
+            } catch (error) {
+                document.getElementById('loading-container').style.display = 'none';
+                document.getElementById('error-container').innerHTML = `
+                    <div class="error-message">
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Render projects based on current filter
+        function renderProjects() {
+            const container = document.getElementById('projects-container');
+
+            let filteredProjects = allProjects;
+            if (currentFilter !== 'all') {
+                filteredProjects = allProjects.filter(p => p.status === currentFilter);
+            }
+
+            if (filteredProjects.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="material-icons">folder_open</div>
+                        <h3>No projects found</h3>
+                        <p>${currentFilter === 'all' ? 'Upload your first project to get started!' : 'No projects with this status yet.'}</p>
+                        ${currentFilter === 'all' ? '<a href="/" class="btn btn-primary"><span class="material-icons">upload</span>Upload Project</a>' : ''}
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = '<div class="projects-list">' +
+                filteredProjects.map(project => `
+                    <div class="project-card" onclick="viewProject('${project.session_id}')">
+                        <div class="project-header">
+                            <div>
+                                <div class="project-title">${escapeHtml(project.project_name || 'Untitled Project')}</div>
+                                <div class="project-meta">
+                                    <span>
+                                        <span class="material-icons" style="font-size: 16px;">calendar_today</span>
+                                        ${formatDate(project.created_at)}
+                                    </span>
+                                    ${project.project_type ? `
+                                        <span>
+                                            <span class="material-icons" style="font-size: 16px;">code</span>
+                                            ${project.project_type.toUpperCase()}
+                                        </span>
+                                    ` : ''}
+                                    <span>
+                                        <span class="material-icons" style="font-size: 16px;">${project.source_type === 'github' ? 'source' : 'upload'}</span>
+                                        ${project.source_type === 'github' ? 'GitHub' : 'ZIP Upload'}
+                                    </span>
+                                </div>
+                            </div>
+                            <span class="status-badge status-${project.status}">${project.status}</span>
+                        </div>
+
+                        ${project.status !== 'processing' ? `
+                            <div class="project-stats">
+                                <div class="stat">
+                                    <span class="stat-label">Dependencies</span>
+                                    <span class="stat-value">${project.dependencies_count || 0}</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="stat-label">Updates</span>
+                                    <span class="stat-value">${project.updates_count || 0}</span>
+                                </div>
+                                ${project.completed_at ? `
+                                    <div class="stat">
+                                        <span class="stat-label">Completed</span>
+                                        <span class="stat-value" style="font-size: 14px;">${formatDate(project.completed_at)}</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        ` : ''}
+
+                        ${project.error_message ? `
+                            <div style="margin-top: 12px; padding: 8px 12px; background: #fee; border-radius: 4px; font-size: 14px; color: #c33;">
+                                <strong>Error:</strong> ${escapeHtml(project.error_message)}
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('') +
+                '</div>';
+        }
+
+        // View project details
+        function viewProject(sessionId) {
+            window.location.href = `/analysis/${sessionId}`;
+        }
+
+        // Format date helper
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diff = now - date;
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+            if (days === 0) return 'Today';
+            if (days === 1) return 'Yesterday';
+            if (days < 7) return `${days} days ago`;
+
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        // Escape HTML helper
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.dataset.filter;
+                renderProjects();
+            });
+        });
+
+        // Load history on page load
+        loadHistory();
+    </script>
+</body>
+
+</html>

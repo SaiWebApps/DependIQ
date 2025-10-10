@@ -1,0 +1,43 @@
+URGENT PROJECT UPDATE REQUIRED!
+
+You are a senior software engineer and these dependency updates WILL break the code if not handled:
+
+BREAKING DEPENDENCY CHANGES:
+{{ changes }}
+
+{% if user_instructions %}
+USER-PROVIDED BUILD & UPDATE INSTRUCTIONS:
+{{ user_instructions }}
+
+IMPORTANT: Follow these user instructions carefully when building, testing, and updating the project!
+{% endif %}
+
+PROJECT FILES TO UPDATE (IGNORE target/, build/, .jar, .class files):
+{{ files_content }}
+
+CRITICAL INSTRUCTIONS:
+1. DEPENDENCY UPDATES ALWAYS BREAK CODE - you must find and fix issues
+2. Update every import statement that might have changed
+3. Fix every deprecated method call
+4. Update API calls that changed between versions
+5. Fix configuration syntax that might have changed
+6. INCLUDE THE DEPENDENCY FILE WITH UPDATED VERSIONS
+{% if user_instructions %}
+7. HONOR ALL USER-PROVIDED INSTRUCTIONS about build/test/update process
+{% endif %}
+
+RETURN FORMAT - MANDATORY JSON (no explanations, no markdown):
+{
+  "build.sbt": "COMPLETE file content with new versions",
+  "src/main/scala/YourFile.scala": "COMPLETE updated file content",
+  "other-file.conf": "COMPLETE updated file content"
+}
+
+REQUIREMENTS:
+- Return COMPLETE file content, not partial changes
+- Include AT LEAST the dependency file + 2 source files
+- If you think no changes needed, you are WRONG - dependency updates always require changes
+- Start response with { immediately - no other text
+- End with } - no other text
+
+{

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>AI Dependency Analysis - Progress</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+    <link rel="manifest" href="/images/site.webmanifest">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="/static/js/theme.js"></script>
+    <link rel="stylesheet" href="/static/css/main.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <span class="material-icons"
+                    style="vertical-align: middle; margin-right: 12px; font-size: 2rem;">search</span>
+                AI Dependency Analysis
+                <span class="ai-badge">In Progress</span>
+            </h1>
+        </div>
+
+        <div class="content">
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill animated-progress" id="progressFill" style="width: 0%"></div>
+                </div>
+                <div class="progress-text" id="progressText">0% - Initializing...</div>
+            </div>
+
+            <div class="step-details" id="stepDetails">
+                <div class="spinner"></div>
+                <h4>
+                    <span class="material-icons status-icon">pending</span>
+                    Preparing to analyze your project...
+                </h4>
+                <p>The AI system is getting ready to extract and research your dependencies.</p>
+            </div>
+
+            <div id="resultsSection" style="display: none;" class="download-section">
+                <h3 style="color: #2e7d32; margin-top: 0;">
+                    <span class="material-icons" style="vertical-align: middle; margin-right: 8px;">check_circle</span>
+                    Analysis Complete!
+                </h3>
+                <p style="color: #2e7d32; margin-bottom: 24px;">Your project dependencies have been analyzed and latest
+                    versions researched.</p>
+                <a href="#" id="viewResultsBtn" class="download-btn">
+                    <span class="material-icons">visibility</span>
+                    View Analysis Results
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Analysis Progress JavaScript
+        document.addEventListener('DOMContentLoaded', function () {
+            const sessionId = window.location.pathname.split('/')[2];
+            const eventSource = new EventSource(`/analysis-stream/${sessionId}`);
+
+            eventSource.onmessage = function (event) {
+                const data = JSON.parse(event.data);
+
+                const progressFill = document.getElementById('progressFill');
+                const progressText = document.getElementById('progressText');
+                const stepDetails = document.getElementById('stepDetails');
+                const resultsSection = document.getElementById('resultsSection');
+                const viewResultsBtn = document.getElementById('viewResultsBtn');
+
+                if (progressFill) {
+                    progressFill.style.width = data.progress + '%';
+                }
+
+                if (progressText) {
+                    progressText.textContent = data.progress + '% - ' + data.step;
+                }
+
+                if (stepDetails) {
+                    if (data.progress === 100) {
+                        stepDetails.innerHTML = '<h4><span class="material-icons status-icon" style="color: #4caf50;">check_circle</span>' + data.step + '</h4><div>' + data.details + '</div>';
+                        stepDetails.className = 'step-details complete';
+
+                        // Show completion message briefly, then auto-redirect
+                        if (resultsSection) {
+                            resultsSection.innerHTML = `
+                                <h3 style="color: #2e7d32; margin-top: 0;">
+                                    <span class="material-icons" style="vertical-align: middle; margin-right: 8px;">check_circle</span>
+                                    Analysis Complete! Redirecting to results...
+                                </h3>
+                                <div style="display: flex; align-items: center; justify-content: center; margin-top: 16px;">
+                                    <div class="spinner" style="margin-right: 12px;"></div>
+                                    <span style="color: #666;">Loading results page...</span>
+                                </div>
+                            `;
+                            resultsSection.style.display = 'block';
+                        }
+
+                        eventSource.close();
+
+                        // Auto-redirect to results after a brief delay to show completion
+                        setTimeout(() => {
+                            window.location.href = `/analysis-results/${sessionId}`;
+                        }, 1500);
+                    } else if (data.step === 'Error' || data.step.includes('Error')) {
+                        stepDetails.innerHTML = '<h4><span class="material-icons status-icon" style="color: #f44336;">error</span>' + data.step + '</h4><p style="color: #f44336;">' + data.details + '</p>';
+                        stepDetails.className = 'step-details';
+                        stepDetails.style.background = '#ffebee';
+                        stepDetails.style.borderLeft = '4px solid #f44336';
+                        eventSource.close();
+                    } else {
+                        stepDetails.innerHTML = '<div class="spinner"></div><h4><span class="material-icons status-icon">autorenew</span>' + data.step + '</h4><p>' + data.details + '</p>';
+                    }
+                }
+            };
+
+            eventSource.onerror = function (event) {
+                console.error('EventSource failed.', event);
+                const stepDetails = document.getElementById('stepDetails');
+                if (stepDetails) {
+                    stepDetails.innerHTML = '<h4><span class="material-icons status-icon" style="color: #f44336;">error</span>Connection Error</h4><p>Unable to connect to progress stream. Please refresh the page.</p>';
+                    stepDetails.className = 'step-details';
+                    stepDetails.style.background = '#ffebee';
+                    stepDetails.style.borderLeft = '4px solid #f44336';
+                }
+            };
+
+            // Start the analysis process
+            fetch(`/start-analysis/${sessionId}`, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Start analysis response:', data);
+                    if (!data.success) {
+                        console.error('Failed to start analysis process:', data);
+                        const stepDetails = document.getElementById('stepDetails');
+                        if (stepDetails) {
+                            stepDetails.innerHTML = '<h4><span class="material-icons status-icon" style="color: #f44336;">error</span>Failed to Start Analysis</h4><p style="color: #f44336;">' + (data.error || data.message || 'Unknown error') + '</p>';
+                            stepDetails.className = 'step-details';
+                            stepDetails.style.background = '#ffebee';
+                            stepDetails.style.borderLeft = '4px solid #f44336';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error starting analysis process:', error);
+                    const stepDetails = document.getElementById('stepDetails');
+                    if (stepDetails) {
+                        stepDetails.innerHTML = '<h4><span class="material-icons status-icon" style="color: #f44336;">error</span>Connection Error</h4><p style="color: #f44336;">Failed to start analysis process. Please try again.</p>';
+                        stepDetails.className = 'step-details';
+                        stepDetails.style.background = '#ffebee';
+                        stepDetails.style.borderLeft = '4px solid #f44336';
+                    }
+                });
+        });
+
+
+    </script>
+</body>
+
+</html>

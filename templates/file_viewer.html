@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>{{ file_path }} - Updated File</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="manifest" href="/images/site.webmanifest">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Roboto+Mono:400,500,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+  <script src="/static/js/theme.js"></script>
+  <link rel="stylesheet" href="/static/css/main.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+
+<body>
+  <div class="container file-viewer-container">
+    <div class="header file-viewer-header">
+      <h1>
+        <span class="material-icons">description</span>
+        {{ file_path }}
+      </h1>
+      <div class="header-actions">
+        <a href="/download/{{ session_id }}" class="file-viewer-nav-btn">
+          <span class="material-icons">download</span>
+          Download Project
+        </a>
+        <a href="javascript:window.close()" class="file-viewer-nav-btn">
+          <span class="material-icons">close</span>
+          Close
+        </a>
+      </div>
+    </div>
+
+    <div class="file-info">
+      <div class="info-item">
+        <span class="material-icons">category</span>
+        <span>Project Type:</span>
+        <span class="info-value">{{ project_type.title() }}</span>
+      </div>
+      <div class="info-item">
+        <span class="material-icons">storage</span>
+        <span>File Size:</span>
+        <span class="info-value">{{ "{:,}".format(file_content|length) }} characters</span>
+      </div>
+      <div class="info-item">
+        <span class="material-icons">code</span>
+        <span>Language:</span>
+        <span class="language-badge">{{ syntax_language }}</span>
+      </div>
+    </div>
+
+    <div class="code-container">
+      <div class="code-wrapper">
+        <pre><code class="language-{{ syntax_language }}">{{ file_content|e }}</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    hljs.highlightAll();
+
+
+  </script>
+</body>
+
+</html>

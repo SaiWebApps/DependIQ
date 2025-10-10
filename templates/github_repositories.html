@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Select Repository - DependIQ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+    <link rel="manifest" href="/images/site.webmanifest">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://unpkg.com/@material/web@1.0.1/all.css" rel="stylesheet">
+    <script src="/static/js/theme.js"></script>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <script type="importmap">
+    {
+        "imports": {
+            "@material/web/": "https://unpkg.com/@material/web@1.0.1/"
+        }
+    }
+  </script>
+    <script type="module">
+        import '@material/web/all.js';
+    </script>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="hero-section">
+            <h1 class="hero-title">
+                📦 Select Repository
+                <span class="ai-badge">GitHub Integration</span>
+            </h1>
+            <p class="hero-subtitle">
+                Choose a repository from your GitHub account to analyze dependencies
+            </p>
+        </div>
+
+        <!-- User Info and Controls -->
+        <div class="content-section">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; flex-wrap: wrap; gap: 16px;">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <img src="{{ user_info.avatar_url }}" alt="Avatar"
+                        style="width: 48px; height: 48px; border-radius: 50%; border: 2px solid #1976d2;">
+                    <div>
+                        <div style="font-weight: 500; color: #333;">Connected as @{{ user_info.login }}</div>
+                        <div style="color: #666; font-size: 0.875rem;" id="repo-count">Loading repositories...</div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 12px;">
+                    <button class="nav-btn" onclick="disconnectGitHub()">
+                        <span class="material-icons">logout</span>
+                        Disconnect
+                    </button>
+                    <a href="/" class="nav-btn">
+                        <span class="material-icons">home</span>
+                        Back to Home
+                    </a>
+                </div>
+            </div>
+
+            <!-- Search and Filter -->
+            <div style="background: #f8f9fa; border-radius: 16px; padding: 24px; margin-bottom: 32px;">
+                <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 200px;">
+                        <div style="position: relative;">
+                            <span class="material-icons"
+                                style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #666;">search</span>
+                            <input type="text" id="search-input" placeholder="Search repositories..."
+                                style="width: 100%; padding: 12px 12px 12px 48px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 1rem;">
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">All</button>
+                        <button class="filter-btn" data-filter="has-deps" onclick="setFilter('has-deps')">Has
+                            Dependencies</button>
+                        <button class="filter-btn" data-filter="python" onclick="setFilter('python')">Python</button>
+                        <button class="filter-btn" data-filter="java" onclick="setFilter('java')">Java/Scala</button>
+                        <button class="filter-btn" data-filter="recent" onclick="setFilter('recent')">Recently
+                            Updated</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loading-state" style="text-align: center; padding: 60px;">
+                <div class="spinner" style="margin: 0 auto 24px auto;"></div>
+                <div style="font-size: 1.1rem; color: #1976d2; font-weight: 500;">Loading your repositories...</div>
+                <div style="color: #666; margin-top: 8px;">Fetching repository information from GitHub...</div>
+            </div>
+
+            <!-- Error State -->
+            <div id="error-state"
+                style="display: none; text-align: center; padding: 60px; background: #fff3e0; border-radius: 16px; border: 2px solid #ff9800;">
+                <span class="material-icons" style="font-size: 4rem; color: #f57c00; margin-bottom: 20px;">error</span>
+                <h3 style="color: #f57c00; margin: 0 0 12px 0;">Unable to load repositories</h3>
+                <p style="color: #666; margin: 0 0 24px 0;" id="error-message">
+                    We couldn't fetch your repositories from GitHub.
+                </p>
+                <button class="upload-btn" onclick="loadRepositories()">
+                    <span class="material-icons">refresh</span>
+                    Try Again
+                </button>
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" style="display: none; text-align: center; padding: 60px;">
+                <span class="material-icons"
+                    style="font-size: 4rem; color: #666; margin-bottom: 20px;">folder_open</span>
+                <h3 style="color: #333; margin: 0 0 12px 0;">No repositories found</h3>
+                <p style="color: #666; margin: 0 0 24px 0;">
+                    We couldn't find any repositories matching your criteria.
+                </p>
+                <button class="nav-btn" onclick="clearFilters()">
+                    <span class="material-icons">clear_all</span>
+                    Clear Filters
+                </button>
+            </div>
+
+            <!-- Repository Grid -->
+            <div id="repository-grid" class="repository-grid" style="display: none;">
+                <!-- Repositories will be loaded here by JavaScript -->
+            </div>
+
+            <!-- Load More -->
+            <div id="load-more-section" style="display: none; text-align: center; margin-top: 32px;">
+                <button class="nav-btn" id="load-more-btn" onclick="loadMoreRepositories()">
+                    <span class="material-icons">expand_more</span>
+                    Load More Repositories
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Repository Detail Modal -->
+    <div id="repo-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-repo-name">Repository Name</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Repository details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const sessionId = '{{ session_id }}';
+        let currentPage = 1;
+        let hasMore = true;
+        let currentFilter = 'all';
+        let currentSearch = '';
+        let allRepositories = [];
+
+        // Load repositories on page load
+        document.addEventListener('DOMContentLoaded', function () {
+            loadRepositories();
+
+            // Set up search input
+            const searchInput = document.getElementById('search-input');
+            let searchTimeout;
+            searchInput.addEventListener('input', function (e) {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    currentSearch = e.target.value;
+                    searchRepositories();
+                }, 500);
+            });
+        });
+
+        async function loadRepositories(page = 1) {
+            try {
+                document.getElementById('loading-state').style.display = 'block';
+                document.getElementById('error-state').style.display = 'none';
+                document.getElementById('empty-state').style.display = 'none';
+                document.getElementById('repository-grid').style.display = 'none';
+
+                const response = await fetch(`/api/github/repositories?session=${sessionId}&page=${page}&per_page=20`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Failed to load repositories');
+                }
+
+                if (page === 1) {
+                    allRepositories = data.repositories;
+                } else {
+                    allRepositories = [...allRepositories, ...data.repositories];
+                }
+
+                hasMore = data.has_more;
+                currentPage = page;
+
+                displayRepositories();
+                updateRepoCount();
+
+                // Check dependencies in background after initial display
+                checkDependenciesInBackground();
+
+            } catch (error) {
+                console.error('Error loading repositories:', error);
+                document.getElementById('loading-state').style.display = 'none';
+                document.getElementById('error-state').style.display = 'block';
+                document.getElementById('error-message').textContent = error.message;
+            }
+        }
+
+        function displayRepositories() {
+            document.getElementById('loading-state').style.display = 'none';
+
+            const filteredRepos = filterRepositories(allRepositories);
+
+            if (filteredRepos.length === 0) {
+                document.getElementById('empty-state').style.display = 'block';
+                document.getElementById('repository-grid').style.display = 'none';
+                document.getElementById('load-more-section').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('empty-state').style.display = 'none';
+            document.getElementById('repository-grid').style.display = 'grid';
+
+            const grid = document.getElementById('repository-grid');
+            grid.innerHTML = '';
+
+            filteredRepos.forEach(repo => {
+                const card = createRepositoryCard(repo);
+                grid.appendChild(card);
+            });
+
+            // Show/hide load more button
+            const loadMoreSection = document.getElementById('load-more-section');
+            if (hasMore && currentFilter === 'all' && !currentSearch) {
+                loadMoreSection.style.display = 'block';
+            } else {
+                loadMoreSection.style.display = 'none';
+            }
+        }
+
+        function createRepositoryCard(repo) {
+            const card = document.createElement('div');
+            card.className = 'repository-card';
+            card.dataset.repoId = `${repo.owner.login}/${repo.name}`;
+
+            const languageColor = getLanguageColor(repo.language);
+            const hasDepFiles = repo.has_dependencies;
+            const updatedText = repo.updated_display || 'Unknown';
+
+            // Show loading state if dependencies haven't been checked yet
+            const depStatus = hasDepFiles === null ?
+                '<span class="material-icons" style="font-size: 16px;">hourglass_empty</span> Checking dependencies...' :
+                hasDepFiles ?
+                    `<span class="material-icons" style="font-size: 16px;">check_circle</span>${repo.dependency_files.length} dependency file${repo.dependency_files.length > 1 ? 's' : ''} found` :
+                    '<span class="material-icons" style="font-size: 16px;">cancel</span>No dependency files found';
+
+            card.innerHTML = `
+        <div class="repo-header">
+          <h3 class="repo-name">${repo.name}</h3>
+          <span class="repo-visibility">${repo.private ? '🔒 Private' : '🌐 Public'}</span>
+        </div>
+
+        ${repo.description ? `<div class="repo-description">${truncateText(repo.description, 80)}</div>` : ''}
+
+        <div class="repo-meta">
+          ${repo.language ? `
+            <div class="repo-language">
+              <div class="language-dot" style="background-color: ${languageColor};"></div>
+              ${repo.language}
+            </div>
+          ` : ''}
+          <div class="repo-stats">
+            <span class="material-icons" style="font-size: 16px;">schedule</span>
+            ${updatedText}
+          </div>
+          ${repo.stargazers_count > 0 ? `
+            <div class="repo-stats">
+              <span class="material-icons" style="font-size: 16px;">star</span>
+              ${repo.stargazers_count}
+            </div>
+          ` : ''}
+        </div>
+
+        <div class="dependency-status ${hasDepFiles === null ? '' : hasDepFiles ? 'has-dependencies' : 'no-dependencies'}" data-dep-status>
+          ${depStatus}
+        </div>
+
+        <button class="repo-analyze-btn ${hasDepFiles === false ? 'disabled' : ''}"
+                ${hasDepFiles === false ? 'disabled' : hasDepFiles === null ? 'disabled' : ''}
+                onclick="analyzeRepository('${repo.owner.login}', '${repo.name}', '${repo.default_branch}')">
+          <span class="material-icons" style="font-size: 16px; margin-right: 8px;">psychology</span>
+          ${hasDepFiles === null ? 'Checking...' : hasDepFiles ? 'Analyze Dependencies' : 'Not Supported'}
+        </button>
+      `;
+
+            return card;
+        }
+
+        function filterRepositories(repositories) {
+            let filtered = repositories.filter(repo => {
+                // Search filter
+                if (currentSearch) {
+                    const searchLower = currentSearch.toLowerCase();
+                    const matchesName = repo.name.toLowerCase().includes(searchLower);
+                    const matchesDescription = repo.description && repo.description.toLowerCase().includes(searchLower);
+                    if (!matchesName && !matchesDescription) {
+                        return false;
+                    }
+                }
+
+                // Type filter
+                switch (currentFilter) {
+                    case 'has-deps':
+                        return repo.has_dependencies;
+                    case 'python':
+                        return repo.project_type === 'python';
+                    case 'java':
+                        return repo.project_type === 'java' || repo.project_type === 'scala';
+                    case 'recent':
+                        // Updated within last 30 days
+                        const thirtyDaysAgo = new Date();
+                        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                        return new Date(repo.updated_at) > thirtyDaysAgo;
+                    default:
+                        return true;
+                }
+            });
+
+            return filtered;
+        }
+
+        function setFilter(filter) {
+            currentFilter = filter;
+
+            // Update filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-filter="${filter}"]`).classList.add('active');
+
+            displayRepositories();
+        }
+
+        function clearFilters() {
+            currentFilter = 'all';
+            currentSearch = '';
+            document.getElementById('search-input').value = '';
+
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector('[data-filter="all"]').classList.add('active');
+
+            displayRepositories();
+        }
+
+        async function loadMoreRepositories() {
+            const loadMoreBtn = document.getElementById('load-more-btn');
+            loadMoreBtn.innerHTML = '<div class="spinner" style="width: 16px; height: 16px; margin-right: 8px; border-width: 2px;"></div>Loading...';
+            loadMoreBtn.disabled = true;
+
+            await loadRepositories(currentPage + 1);
+
+            loadMoreBtn.innerHTML = '<span class="material-icons">expand_more</span>Load More Repositories';
+            loadMoreBtn.disabled = false;
+        }
+
+        async function searchRepositories() {
+            if (!currentSearch.trim()) {
+                displayRepositories();
+                return;
+            }
+
+            try {
+                document.getElementById('loading-state').style.display = 'block';
+                document.getElementById('repository-grid').style.display = 'none';
+
+                const response = await fetch(`/api/github/repositories?session=${sessionId}&search=${encodeURIComponent(currentSearch)}`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Search failed');
+                }
+
+                allRepositories = data.repositories;
+                hasMore = false; // Search results don't support pagination
+
+                displayRepositories();
+
+            } catch (error) {
+                console.error('Search error:', error);
+                document.getElementById('loading-state').style.display = 'none';
+                document.getElementById('error-state').style.display = 'block';
+                document.getElementById('error-message').textContent = error.message;
+            }
+        }
+
+        async function analyzeRepository(owner, repo, branch) {
+            if (!confirm(`Start dependency analysis for ${owner}/${repo}?`)) {
+                return;
+            }
+
+            try {
+                // Get user instructions from sessionStorage (set during GitHub auth)
+                const userInstructions = sessionStorage.getItem('github_user_instructions') || '';
+
+                // Prepare form data with user instructions
+                const formData = new FormData();
+                if (userInstructions) {
+                    formData.append('user_instructions', userInstructions);
+                }
+
+                const response = await fetch(`/github/analyze/${owner}/${repo}?session=${sessionId}&ref=${branch}`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.redirected) {
+                    // Clear the stored instructions after use
+                    sessionStorage.removeItem('github_user_instructions');
+                    window.location.href = response.url;
+                } else if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to start analysis');
+                }
+
+            } catch (error) {
+                console.error('Analysis error:', error);
+                alert(`Failed to start analysis: ${error.message}`);
+            }
+        }
+
+        async function disconnectGitHub() {
+            if (!confirm('Disconnect from GitHub? You will need to sign in again to access repositories.')) {
+                return;
+            }
+
+            try {
+                await fetch(`/github/disconnect?session=${sessionId}`, { method: 'POST' });
+            } catch (error) {
+                console.error('Disconnect error:', error);
+            }
+
+            window.location.href = '/';
+        }
+
+        function updateRepoCount() {
+            const totalRepos = allRepositories.length;
+            const hasDepRepos = allRepositories.filter(repo => repo.has_dependencies).length;
+            const publicRepos = allRepositories.filter(repo => !repo.private).length;
+            const privateRepos = allRepositories.filter(repo => repo.private).length;
+
+            document.getElementById('repo-count').textContent =
+                `Access: ${totalRepos} repositories (${publicRepos} public, ${privateRepos} private) • ${hasDepRepos} with dependencies`;
+        }
+
+        function getLanguageColor(language) {
+            const colors = {
+                'Python': '#3776ab',
+                'Java': '#b07219',
+                'Scala': '#c22d40',
+                'JavaScript': '#f1e05a',
+                'TypeScript': '#2b7489',
+                'Go': '#00add8',
+                'Rust': '#dea584',
+                'C++': '#f34b7d',
+                'C#': '#239120',
+                'Ruby': '#701516'
+            };
+            return colors[language] || '#586e75';
+        }
+
+        function truncateText(text, maxLength) {
+            if (text.length <= maxLength) return text;
+            return text.substring(0, maxLength) + '...';
+        }
+
+        async function checkDependenciesInBackground() {
+            // Check dependencies for all repos in background
+            const reposToCheck = allRepositories.filter(r => r.has_dependencies === null);
+
+            for (const repo of reposToCheck) {
+                try {
+                    const response = await fetch(`/api/github/repository/${repo.owner.login}/${repo.name}?session=${sessionId}`);
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        // Update the repo in our list
+                        const repoIndex = allRepositories.findIndex(r => r.id === repo.id);
+                        if (repoIndex !== -1) {
+                            allRepositories[repoIndex].dependency_files = data.dependency_info.dependency_files;
+                            allRepositories[repoIndex].has_dependencies = data.dependency_info.has_dependencies;
+                            allRepositories[repoIndex].project_type = data.dependency_info.project_type;
+
+                            // Update the card in the UI
+                            updateRepositoryCard(allRepositories[repoIndex]);
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Failed to check dependencies for ${repo.full_name}:`, error);
+                }
+            }
+
+            // Update counts after all checks complete
+            updateRepoCount();
+        }
+
+        function updateRepositoryCard(repo) {
+            const card = document.querySelector(`[data-repo-id="${repo.owner.login}/${repo.name}"]`);
+            if (!card) return;
+
+            const hasDepFiles = repo.has_dependencies;
+            const depStatusEl = card.querySelector('[data-dep-status]');
+            const analyzeBtn = card.querySelector('.repo-analyze-btn');
+
+            if (depStatusEl && analyzeBtn) {
+                // Update dependency status
+                const depStatus = hasDepFiles ?
+                    `<span class="material-icons" style="font-size: 16px;">check_circle</span>${repo.dependency_files.length} dependency file${repo.dependency_files.length > 1 ? 's' : ''} found` :
+                    '<span class="material-icons" style="font-size: 16px;">cancel</span>No dependency files found';
+
+                depStatusEl.innerHTML = depStatus;
+                depStatusEl.className = `dependency-status ${hasDepFiles ? 'has-dependencies' : 'no-dependencies'}`;
+
+                // Update analyze button
+                analyzeBtn.innerHTML = `
+                    <span class="material-icons" style="font-size: 16px; margin-right: 8px;">psychology</span>
+                    ${hasDepFiles ? 'Analyze Dependencies' : 'Not Supported'}
+                `;
+                analyzeBtn.disabled = !hasDepFiles;
+                analyzeBtn.className = `repo-analyze-btn ${!hasDepFiles ? 'disabled' : ''}`;
+            }
+        }
+
+        // Add filter button styles
+        const style = document.createElement('style');
+        style.textContent = `
+      .filter-btn {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 8px 16px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #666;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+      .filter-btn:hover {
+        border-color: #1976d2;
+        color: #1976d2;
+      }
+      .filter-btn.active {
+        background: #1976d2;
+        border-color: #1976d2;
+        color: white;
+      }
+      .repo-analyze-btn.disabled {
+        background: #e0e0e0 !important;
+        color: #9e9e9e !important;
+        cursor: not-allowed !important;
+      }
+    `;
+        document.head.appendChild(style);
+    </script>
+</body>
+
+</html>

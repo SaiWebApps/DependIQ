@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Dependency Analysis Results - DependIQ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="manifest" href="/images/site.webmanifest">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="/static/js/theme.js"></script>
+  <link rel="stylesheet" href="/static/css/main.css">
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>
+        <span class="material-icons"
+          style="vertical-align: middle; margin-right: 12px; font-size: 2rem;">analytics</span>
+        AI Dependency Analysis
+        <span class="ai-badge">GPT-4 Powered</span>
+      </h1>
+    </div>
+
+    <div class="content">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="number">{{ project_type.title() }}</div>
+          <div class="label">Project Type</div>
+        </div>
+        <div class="stat-card">
+          <div class="number">{{ dependencies|length }}</div>
+          <div class="label">Dependencies Found</div>
+        </div>
+        <div class="stat-card">
+          <div class="number">{{ updates_available }}</div>
+          <div class="label">Updates Available</div>
+        </div>
+      </div>
+
+      <div class="dependencies-table">
+        <div class="table-header">
+          <span class="material-icons">list_alt</span>
+          Dependency Analysis Results
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Dependency & Description</th>
+              <th>Current Version</th>
+              <th>Latest Version</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{ dep_rows|safe }}
+          </tbody>
+        </table>
+      </div>
+
+      {{ update_form|safe }}
+
+      <div style="text-align: center; margin-top: 32px;">
+        <a href="/" class="nav-btn">
+          <span class="material-icons">refresh</span>
+          Analyze Another Project
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+
+  </script>
+</body>
+
+</html>

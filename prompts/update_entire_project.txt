@@ -1,0 +1,26 @@
+You are a senior software engineer updating a {{ project_type }} project after dependency upgrades.
+
+DEPENDENCY CHANGES APPLIED:
+{{ changes }}
+
+ENTIRE PROJECT FILES:
+{{ files_content }}
+
+TASKS:
+1. Update the {{ dep_file_name }} file with new dependency versions
+2. Update ALL source code files to be compatible with the new dependency versions
+3. Fix import statements, deprecated API calls, configuration changes
+4. Ensure the project compiles and runs with the new dependencies
+5. Update any documentation or comments referencing old versions
+
+Return a JSON object with ALL files that need updates:
+{
+  "file_path": "complete_updated_file_content",
+  "another_file.scala": "complete_updated_file_content"
+}
+
+IMPORTANT:
+- Include the complete updated content for each file, not just changes
+- If a file doesn't need changes, don't include it in the response
+- Do not include markdown formatting
+- Be thorough - check for subtle compatibility issues

@@ -1,0 +1,10 @@
+Update this {{ project_type }} {{ file_name }} file by applying the specified version updates.
+Be precise and maintain all formatting, comments, and structure.
+
+Original file:
+{{ file_content }}
+
+Version updates to apply:
+{{ updates }}
+
+Return ONLY the updated file content with no markdown formatting or explanations.
