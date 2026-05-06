@@ -2,7 +2,8 @@
 Authentication API routes
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -416,157 +417,93 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
 
 
 @router.get("/github")
-async def github_oauth_login(db: AsyncSession = Depends(get_db)):
-    """
-    Initiate GitHub OAuth flow
-
-    Redirects user to GitHub authorization page
-    """
+async def github_oauth_login(request: Request):
+    """Initiate GitHub OAuth — redirect to GitHub with state in signed cookie."""
     import secrets
 
-    from fastapi.responses import RedirectResponse
-
+    from ..database import AsyncSessionLocal
     from ..services.github_oauth_service import GitHubOAuthService
 
-    github_service = GitHubOAuthService(db)
-
-    # Generate state for CSRF protection
     state = secrets.token_urlsafe(32)
 
-    # Store state in session/cache for validation (simplified for now)
-    # In production, store in Redis or database
+    async with AsyncSessionLocal() as db:
+        service = GitHubOAuthService(db)
+        authorize_url = service.get_authorize_url(state)
 
-    auth_url = github_service.get_authorization_url(state)
-    return RedirectResponse(url=auth_url)
+    response = RedirectResponse(url=authorize_url, status_code=302)
+    # Store state in a signed cookie (survives restart, no server-side storage)
+    response.set_cookie(
+        key="oauth_state",
+        value=state,
+        max_age=600,  # 10 minutes
+        httponly=True,
+        samesite="lax",
+    )
+    return response
 
 
 @router.get("/github/callback")
 async def github_oauth_callback(
-    code: str, state: str, db: AsyncSession = Depends(get_db)
-):
-    """
-    Handle GitHub OAuth callback
-
-    - **code**: Authorization code from GitHub
-    - **state**: CSRF protection state
-    """
-    from fastapi.responses import RedirectResponse
-
-    from ..services.github_oauth_service import GitHubOAuthService
-    from ..services.token_service import create_access_token, create_refresh_token
-
-    github_service = GitHubOAuthService(db)
-
-    # Exchange code for token
-    token_data = await github_service.exchange_code_for_token(code)
-    if not token_data:
-        return RedirectResponse(url="/login?error=github_auth_failed")
-
-    access_token = token_data.get("access_token")
-
-    # Get GitHub user info
-    github_user = await github_service.get_github_user_info(access_token)
-    if not github_user:
-        return RedirectResponse(url="/login?error=github_user_fetch_failed")
-
-    # Check if user exists with GitHub email
-    from sqlalchemy import select
-
-    result = await db.execute(
-        select(User).where(User.email == github_user["email"].lower())
-    )
-    user = result.scalar_one_or_none()
-
-    if not user:
-        # Create new user with GitHub OAuth
-        user = User(
-            email=github_user["email"].lower(),
-            email_verified=True,  # GitHub emails are verified
-            is_active=True,
-        )
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
-
-    # Link GitHub account
-    await github_service.link_github_account(
-        user=user,
-        access_token=access_token,
-        github_user_data=github_user,
-        refresh_token=token_data.get("refresh_token"),
-    )
-
-    # Create session
-    await github_service.create_user_session(user=user, access_token=access_token)
-
-    # Generate JWT tokens
-    jwt_access_token = create_access_token({"user_id": str(user.id)})
-    # Note: Refresh token intentionally not returned via cookie for security
-    _jwt_refresh_token = create_refresh_token({"user_id": str(user.id)})
-
-    # Create redirect response to profile page
-    response = RedirectResponse(url="/profile?github_connected=true", status_code=303)
-
-    # Set tokens in cookies
-    response.set_cookie(
-        key="access_token",
-        value=jwt_access_token,
-        max_age=900,  # 15 minutes
-        httponly=False,  # Allow JavaScript access for API calls
-        samesite="lax",
-    )
-
-    return response
-
-
-@router.post("/github/link")
-async def link_github_account(
-    code: str,
-    current_user: User = Depends(get_current_user),
+    request: Request,
+    code: str = Query(None),
+    state: str = Query(None),
+    error: str = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
-    """
-    Link GitHub account to existing user
-
-    - **code**: Authorization code from GitHub
-    """
+    """Handle GitHub OAuth callback — exchange code, create/find user, set JWT cookie."""
     from ..services.github_oauth_service import GitHubOAuthService
 
-    github_service = GitHubOAuthService(db)
+    # Handle OAuth errors from GitHub
+    if error:
+        return RedirectResponse(url="/login?error=github_oauth_denied", status_code=302)
+
+    # Validate required params
+    if not code or not state:
+        return RedirectResponse(
+            url="/login?error=github_oauth_invalid", status_code=302
+        )
+
+    # Validate state against cookie
+    cookie_state = request.cookies.get("oauth_state")
+    if not cookie_state or cookie_state != state:
+        return RedirectResponse(
+            url="/login?error=github_oauth_state_mismatch", status_code=302
+        )
+
+    service = GitHubOAuthService(db)
 
     # Exchange code for token
-    token_data = await github_service.exchange_code_for_token(code)
-    if not token_data:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to exchange GitHub authorization code",
+    access_token = await service.exchange_code_for_token(code)
+    if not access_token:
+        return RedirectResponse(
+            url="/login?error=github_token_exchange_failed", status_code=302
         )
-
-    access_token = token_data.get("access_token")
 
     # Get GitHub user info
-    github_user = await github_service.get_github_user_info(access_token)
+    github_user = await service.get_github_user(access_token)
     if not github_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to fetch GitHub user information",
+        return RedirectResponse(
+            url="/login?error=github_user_fetch_failed", status_code=302
         )
 
-    # Link GitHub account
-    await github_service.link_github_account(
-        user=current_user,
-        access_token=access_token,
-        github_user_data=github_user,
-        refresh_token=token_data.get("refresh_token"),
-    )
+    # Create or find user
+    user = await service.get_or_create_user(github_user, access_token)
+    if not user:
+        return RedirectResponse(
+            url="/login?error=github_user_creation_failed", status_code=302
+        )
 
-    # Create session
-    await github_service.create_user_session(
-        user=current_user, access_token=access_token
-    )
+    # Mint JWT and set cookie (same as email/password login)
+    jwt_token = create_access_token(str(user.id), user.email)
 
-    return {
-        "message": "GitHub account linked successfully",
-        "github_user": github_user["login"],
-        "github_email": github_user["email"],
-    }
+    response = RedirectResponse(url="/", status_code=302)
+    response.set_cookie(
+        key="access_token",
+        value=jwt_token,
+        max_age=900,
+        httponly=False,
+        samesite="lax",
+    )
+    # Clear the oauth_state cookie
+    response.delete_cookie("oauth_state")
+    return response

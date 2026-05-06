@@ -18,11 +18,15 @@ class EmailService:
 
     def __init__(self):
         self.environment = os.getenv("ENVIRONMENT", "development")
-        self.from_email = os.getenv("EMAIL_FROM", "noreply@dependiq.com")
         self.from_name = os.getenv("EMAIL_FROM_NAME", "dependiq")
-        self.email_service = os.getenv("EMAIL_SERVICE", "resend")  # resend or sendgrid
-        self.resend_api_key = os.getenv("RESEND_API_KEY")
+        self.email_service = os.getenv("EMAIL_SERVICE", "gmail")  # gmail or sendgrid
         self.sendgrid_api_key = os.getenv("SENDGRID_API_KEY")
+        # Gmail SMTP settings
+        self.gmail_user = os.getenv("GMAIL_USER")
+        self.gmail_app_password = os.getenv("GMAIL_APP_PASSWORD")
+        self.from_email = self.gmail_user or os.getenv(
+            "EMAIL_FROM", "noreply@example.com"
+        )
 
     async def send_magic_link(
         self, to_email: str, magic_link_url: str, temp_password: str
@@ -232,14 +236,29 @@ class EmailService:
         """
         Internal method to send email
 
-        In development: Logs to console
-        In production: Uses configured email service
+        Priority: Use configured email service if API key is available
+        Fallback: Log to console in development mode
         """
         try:
-            if self.environment == "development":
-                # Development: Log email to console
+            # Try to send via configured service if API key is available
+            if (
+                self.email_service == "gmail"
+                and self.gmail_user
+                and self.gmail_app_password
+            ):
+                # Use Gmail SMTP
+                return await self._send_with_gmail(
+                    to_email, subject, html_body, text_body
+                )
+            elif self.email_service == "sendgrid" and self.sendgrid_api_key:
+                # Use SendGrid
+                return await self._send_with_sendgrid(
+                    to_email, subject, html_body, text_body
+                )
+            else:
+                # No email service configured - log to console (development mode)
                 logger.info(f"\n{'='*80}")
-                logger.info("📧 EMAIL (Development Mode)")
+                logger.info("📧 EMAIL (Development Mode - No Email Service Configured)")
                 logger.info(f"{'='*80}")
                 logger.info(f"To: {to_email}")
                 logger.info(f"From: {self.from_name} <{self.from_email}>")
@@ -258,71 +277,13 @@ class EmailService:
                 print(text_body)
                 print(f"{'='*80}\n")
 
+                logger.warning(
+                    "Set GMAIL_USER/GMAIL_APP_PASSWORD or SENDGRID_API_KEY environment variable to enable real email sending."
+                )
                 return True
-
-            elif self.email_service == "resend" and self.resend_api_key:
-                # Production: Use Resend
-                return await self._send_with_resend(
-                    to_email, subject, html_body, text_body
-                )
-            elif self.email_service == "sendgrid" and self.sendgrid_api_key:
-                # Production: Use SendGrid
-                return await self._send_with_sendgrid(
-                    to_email, subject, html_body, text_body
-                )
-            else:
-                # No email service configured
-                logger.warning(
-                    f"Email service not configured. Email to {to_email} not sent."
-                )
-                logger.warning(
-                    "Set RESEND_API_KEY or SENDGRID_API_KEY environment variable to enable email sending."
-                )
-                return False
 
         except Exception as e:
             logger.error(f"Failed to send email to {to_email}: {e!s}")
-            return False
-
-    async def _send_with_resend(
-        self, to_email: str, subject: str, html_body: str, text_body: str
-    ) -> bool:
-        """Send email using Resend API"""
-        try:
-            import httpx
-
-            headers = {
-                "Authorization": f"Bearer {self.resend_api_key}",
-                "Content-Type": "application/json",
-            }
-
-            payload = {
-                "from": f"{self.from_name} <{self.from_email}>",
-                "to": [to_email],
-                "subject": subject,
-                "html": html_body,
-                "text": text_body,
-            }
-
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    "https://api.resend.com/emails",
-                    json=payload,
-                    headers=headers,
-                    timeout=10.0,
-                )
-
-                if response.status_code >= 200 and response.status_code < 300:
-                    logger.info(f"Email sent successfully to {to_email} via Resend")
-                    return True
-                else:
-                    logger.error(
-                        f"Resend returned status {response.status_code}: {response.text}"
-                    )
-                    return False
-
-        except Exception as e:
-            logger.error(f"Resend error: {e!s}")
             return False
 
     async def _send_with_sendgrid(
@@ -354,3 +315,46 @@ class EmailService:
         except Exception as e:
             logger.error(f"SendGrid error: {e!s}")
             return False
+
+    async def _send_with_gmail(
+        self, to_email: str, subject: str, html_body: str, text_body: str
+    ) -> bool:
+        """Send email using Gmail SMTP"""
+        try:
+            import asyncio
+            from email.mime.multipart import MIMEMultipart
+            from email.mime.text import MIMEText
+
+            # Create message
+            msg = MIMEMultipart("alternative")
+            msg["From"] = f"{self.from_name} <{self.gmail_user}>"
+            msg["To"] = to_email
+            msg["Subject"] = subject
+
+            # Add text and HTML parts
+            part1 = MIMEText(text_body, "plain")
+            part2 = MIMEText(html_body, "html")
+            msg.attach(part1)
+            msg.attach(part2)
+
+            # Send email using asyncio to avoid blocking
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(
+                None, self._send_gmail_sync, to_email, msg.as_string()
+            )
+
+            logger.info(f"Email sent successfully to {to_email} via Gmail SMTP")
+            return True
+
+        except Exception as e:
+            logger.error(f"Gmail SMTP error: {e!s}")
+            return False
+
+    def _send_gmail_sync(self, to_email: str, msg_string: str):
+        """Synchronous Gmail SMTP send (called in executor)"""
+        import smtplib
+
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
+            server.login(self.gmail_user, self.gmail_app_password)
+            server.sendmail(self.gmail_user, to_email, msg_string)

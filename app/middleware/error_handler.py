@@ -4,7 +4,7 @@ Enhanced error handling middleware for better user feedback
 
 import logging
 
-from fastapi import Request, status
+from fastapi import HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
@@ -182,6 +182,18 @@ async def jwt_error_handler(request: Request, exc: InvalidTokenError):
     )
 
 
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Handle HTTPExceptions — preserve original status code instead of swallowing as 500."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": exc.detail,
+            "type": "http_error",
+            "status_code": exc.status_code,
+        },
+    )
+
+
 async def generic_error_handler(request: Request, exc: Exception):
     """Handle all other unhandled exceptions"""
     logger.error(f"Unhandled exception: {exc!s}", exc_info=True)
@@ -207,6 +219,7 @@ def register_error_handlers(app):
         from app.middleware.error_handler import register_error_handlers
         register_error_handlers(app)
     """
+    app.add_exception_handler(HTTPException, http_exception_handler)
     app.add_exception_handler(AuthenticationError, authentication_error_handler)
     app.add_exception_handler(AuthorizationError, authorization_error_handler)
     app.add_exception_handler(ResourceNotFoundError, resource_not_found_handler)

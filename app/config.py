@@ -8,8 +8,8 @@ from typing import ClassVar
 from dotenv import load_dotenv
 from openai import OpenAI
 
-# Load environment variables from .env file
-load_dotenv()
+# Load environment variables from .env file (override=True so .env wins over stale shell exports)
+load_dotenv(override=True)
 
 
 # OpenAI client configuration
@@ -78,10 +78,11 @@ class Config:
     GITHUB_OAUTH_SCOPES = "repo,user:email"  # Access to repos and email
 
     # Email settings (optional - for verification/reset emails)
-    EMAIL_SERVICE = os.getenv("EMAIL_SERVICE", "resend")  # resend, sendgrid, or ses
-    RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+    EMAIL_SERVICE = os.getenv("EMAIL_SERVICE", "gmail")  # gmail or sendgrid
     SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
-    EMAIL_FROM = os.getenv("EMAIL_FROM", "onboarding@resend.dev")
+    GMAIL_USER = os.getenv("GMAIL_USER")
+    GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
+    EMAIL_FROM = os.getenv("EMAIL_FROM", "noreply@example.com")
     EMAIL_FROM_NAME = os.getenv("EMAIL_FROM_NAME", "dependiq")
 
     # File processing settings

@@ -23,8 +23,8 @@ from ..models import User
 from ..services.ai_service import (
     extract_dependencies_with_gpt,
     identify_artifacts_with_gpt,
-    research_latest_versions_with_gpt,
 )
+from ..services.dependency_agent import research_latest_versions
 from ..services.progress_service import (
     analysis_status,
     create_analysis_stream,
@@ -223,8 +223,8 @@ def analyze_dependencies_with_progress(session_id: str):
             )
             time.sleep(1)
 
-            # Use ChatGPT to research latest versions
-            dependencies = research_latest_versions_with_gpt(dependencies, project_type)
+            # Research latest versions using agent with live registry lookups
+            dependencies = research_latest_versions(dependencies, project_type)
 
             update_analysis_progress(
                 session_id,

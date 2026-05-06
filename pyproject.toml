@@ -4,51 +4,55 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dependiq"
-version = "0.1.0"
-description = "AI-powered dependency update tool with intelligent compatibility fixes"
+version = "0.2.0"
+description = "AI-powered dependency intelligence platform"
 authors = [{name = "dependiq Team"}]
 license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
 dependencies = [
-    "fastapi==0.111.0",
-    "uvicorn[standard]==0.27.1",
-    "openai==1.30.1",
-    "python-multipart==0.0.9",
-    "httpx==0.24.1",
-    "aiohttp==3.9.1",
-    "jinja2==3.1.4",
+    "fastapi>=0.111.0",
+    "uvicorn[standard]>=0.27.1",
+    "gunicorn>=21.2.0",
+    "python-dotenv>=1.0.0",
+    "openai>=1.30.1",
+    "litellm>=1.40.0",
+    "python-multipart>=0.0.9",
+    "httpx>=0.24.1",
+    "aiohttp>=3.9.1",
+    "jinja2>=3.1.4",
+    "authlib>=1.2.1",
+    "requests>=2.31.0",
+    "python-jose[cryptography]>=3.3.0",
+    "sqlalchemy>=2.0.36",
+    "asyncpg>=0.30.0",
+    "alembic>=1.14.0",
+    "greenlet>=3.0.3",
+    "bcrypt>=4.1.2",
+    "passlib[bcrypt]>=1.7.4",
+    "pyjwt>=2.8.0",
+    "email-validator>=2.1.0",
+    "pydantic[email]>=2.5.0",
 ]
 
 [tool.setuptools]
-packages = ["app", "app.api", "app.middleware", "app.models", "app.services", "app.utils"]
+packages = ["app", "app.api", "app.middleware", "app.models", "app.services", "app.services.llm", "app.utils"]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
-    "ruff==0.1.15",
-    "black==23.12.1",
-    "isort==5.13.2",
-    "mypy==1.8.0",
-    "pre-commit==3.6.0",
-    "pytest==8.4.2",
+    "ruff>=0.4.0",
+    "mypy>=1.8.0",
+    "pre-commit>=3.6.0",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "respx>=0.21.0",
+    "aiosqlite>=0.19.0",
 ]
-
-[tool.black]
-line-length = 88
-target-version = ['py311']
-include = '\.pyi?$'
-extend-exclude = '''
-/(
-  # directories
-  \.eggs
-  | \.git
-  | \.venv
-  | build
-  | dist
-  | __pycache__
-  | \.pytest_cache
-)/
-'''
+test = [
+    "selenium>=4.16.0",
+    "webdriver-manager>=4.0.1",
+]
 
 [tool.ruff]
 line-length = 88
@@ -109,12 +113,8 @@ ignore = [
 "app/services/github_oauth_service.py" = ["S105"]  # URL constant is not a password
 
 
-[tool.isort]
-profile = "black"
-multi_line_output = 3
-line_length = 88
-known_first_party = ["prompt_templates"]
-skip_glob = [".venv/*", "build/*", "dist/*"]
+[tool.ruff.format]
+quote-style = "double"
 
 [tool.mypy]
 python_version = "3.11"

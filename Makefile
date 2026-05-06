@@ -1,4 +1,4 @@
-.PHONY: help install install-dev format lint typecheck pre-commit test test-unit test-integration test-functional test-selenium test-selenium-headless test-coverage test-quick quality clean run dev setup github db-setup db-create db-migrate db-reset db-status db-start db-stop pre-commit-install pre-commit-run docker-build docs check-python
+.PHONY: help install install-dev format lint typecheck pre-commit test test-unit test-integration test-functional test-selenium test-selenium-headless test-coverage test-quick test-llm quality clean run dev setup github db-setup db-create db-migrate db-reset db-status db-start db-stop pre-commit-install pre-commit-run docker-build docs check-python
 
 # Python version requirements
 PYTHON_MIN_VERSION := 3.11
@@ -132,11 +132,22 @@ format:
 		echo "⚠️  Virtual environment not found. Running install-dev..."; \
 		$(MAKE) install-dev; \
 	fi
-	@echo "🎨 Formatting code..."
-	$(PYTHON_VENV) -m black .
-	$(PYTHON_VENV) -m isort .
-	$(PYTHON_VENV) -m ruff check . --fix
-	@echo "✅ Code formatting complete!"
+	@echo "🎨 Formatting code with black, isort, and ruff..."
+	@$(PYTHON_VENV) -m black . 2>&1 | grep -v "All done\|files left unchanged" || true
+	@$(PYTHON_VENV) -m isort . 2>&1 | grep -v "Skipped\|files left unchanged" || true
+	@echo "🔧 Auto-fixing ruff issues..."
+	@$(PYTHON_VENV) -m ruff check . --fix --exit-zero
+	@echo "🔍 Checking for remaining ruff issues..."
+	@if ! $(PYTHON_VENV) -m ruff check . --quiet; then \
+		echo ""; \
+		echo "❌ Ruff found issues that couldn't be auto-fixed:"; \
+		echo ""; \
+		$(PYTHON_VENV) -m ruff check .; \
+		echo ""; \
+		echo "💡 Please fix these issues before running tests"; \
+		exit 1; \
+	fi
+	@echo "✅ Code formatting complete - no issues found!"
 
 # Linting
 lint:
@@ -168,8 +179,16 @@ pre-commit:
 	@$(VENV_BIN)/pre-commit run --all-files || { echo "❌ Pre-commit checks failed"; exit 1; }
 	@echo "✅ Pre-commit checks passed!"
 
+# Check if pre-commit hooks are installed
+check-hooks:
+	@if [ ! -f ".git/hooks/pre-commit" ] || ! grep -q "pre-commit" ".git/hooks/pre-commit" 2>/dev/null; then \
+		echo "⚠️  Pre-commit hooks not installed!"; \
+		echo "📦 Installing pre-commit hooks to catch issues automatically..."; \
+		$(MAKE) pre-commit-install; \
+	fi
+
 # Testing
-test: pre-commit
+test: check-hooks clean format
 	@echo ""
 	@echo "🧪 Running all tests (unit, integration, functional, and Selenium in headless mode)..."
 	@echo "🚀 Starting application in background for Selenium tests..."
@@ -193,25 +212,37 @@ test: pre-commit
 	fi; \
 	exit $$EXIT_CODE
 
-test-unit: pre-commit
+test-unit: check-hooks clean format
 	@echo ""
 	@echo "🧪 Running unit tests..."
 	$(PYTHON_VENV) -m pytest tests/test_utils.py tests/test_services.py tests/test_middleware.py tests/test_models.py test_prompt_templates.py -v --assert=plain
 	@echo "✅ Unit tests complete!"
 
-test-integration: pre-commit
+test-llm:
+	@echo ""
+	@echo "🧪 Running LLM agent layer tests..."
+	/opt/homebrew/bin/uv run pytest tests/llm/ -v --tb=short -m "not integration"
+	@echo "✅ LLM tests complete!"
+
+test-llm-integration:
+	@echo ""
+	@echo "🌐 Running LLM integration tests (hits live registries)..."
+	/opt/homebrew/bin/uv run pytest tests/llm/ -v --tb=short -m "integration"
+	@echo "✅ LLM integration tests complete!"
+
+test-integration: check-hooks clean format
 	@echo ""
 	@echo "🧪 Running integration tests..."
 	$(PYTHON_VENV) -m pytest tests/test_api_integration.py tests/test_auth_integration.py tests/test_user_profile.py -v --assert=plain
 	@echo "✅ Integration tests complete!"
 
-test-functional: pre-commit
+test-functional: check-hooks clean format
 	@echo ""
 	@echo "🧪 Running functional tests..."
 	$(PYTHON_VENV) -m pytest tests/test_functional.py -v --assert=plain
 	@echo "✅ Functional tests complete!"
 
-test-selenium: pre-commit
+test-selenium: check-hooks clean format
 	@echo ""
 	@echo "🌐 Running Selenium end-to-end tests (with visible browser)..."
 	@echo "🚀 Starting application in background..."
@@ -234,7 +265,7 @@ test-selenium: pre-commit
 	fi; \
 	exit $$EXIT_CODE
 
-test-selenium-headless: pre-commit
+test-selenium-headless: check-hooks clean format
 	@echo ""
 	@echo "🌐 Running Selenium tests in headless mode..."
 	@echo "🚀 Starting application in background..."
@@ -257,20 +288,20 @@ test-selenium-headless: pre-commit
 	fi; \
 	exit $$EXIT_CODE
 
-test-coverage: pre-commit
+test-coverage: check-hooks clean format
 	@echo ""
 	@echo "🧪 Running tests with coverage..."
 	$(PYTHON_VENV) -m pytest tests/ test_prompt_templates.py --cov=app --cov-report=html --cov-report=term-missing --assert=plain --ignore=tests/selenium
 	@echo "✅ Tests complete! Open htmlcov/index.html to view coverage report."
 
-test-quick: pre-commit
+test-quick: check-hooks clean format
 	@echo ""
 	@echo "🧪 Running quick tests (excluding slow)..."
 	$(PYTHON_VENV) -m pytest tests/ test_prompt_templates.py -v -m "not slow" --assert=plain --ignore=tests/selenium
 	@echo "✅ Quick tests complete!"
 
 # Run all quality checks
-quality: pre-commit test
+quality: check-hooks format test
 	@echo "✅ All quality checks passed!"
 
 # Clean up
@@ -439,9 +470,16 @@ pre-commit-install:
 	@if [ ! -d ".venv" ]; then \
 		echo "⚠️  Virtual environment not found. Running install-dev..."; \
 		$(MAKE) install-dev; \
+	else \
+		echo "📦 Installing pre-commit hooks for git..."; \
+		$(VENV_BIN)/pre-commit install; \
+		$(VENV_BIN)/pre-commit install --hook-type pre-push; \
+		echo "✅ Pre-commit hooks installed!"; \
+		echo "   - Hooks will run automatically on 'git commit'"; \
+		echo "   - Format checks will run on 'git push'"; \
+		echo ""; \
+		echo "💡 To run hooks manually: make pre-commit-run"; \
 	fi
-	$(PYTHON_VENV) -m pre_commit install
-	@echo "✅ Pre-commit hooks installed!"
 
 pre-commit-run:
 	@if [ ! -d ".venv" ]; then \
