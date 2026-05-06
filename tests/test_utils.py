@@ -208,7 +208,7 @@ class TestProjectUtils:
         pom_file = tmp_path / "pom.xml"
         pom_file.write_text("<project></project>")
 
-        project_type, dep_file, dep_name = detect_project_type(str(tmp_path))
+        project_type, _dep_file, dep_name = detect_project_type(str(tmp_path))
         assert project_type == "maven"
         assert dep_name == "pom.xml"
 
@@ -217,7 +217,7 @@ class TestProjectUtils:
         build_file = tmp_path / "build.gradle"
         build_file.write_text("plugins { }")
 
-        project_type, dep_file, dep_name = detect_project_type(str(tmp_path))
+        project_type, _dep_file, dep_name = detect_project_type(str(tmp_path))
         assert project_type == "gradle"
         assert dep_name == "build.gradle"
 
@@ -226,7 +226,7 @@ class TestProjectUtils:
         build_file = tmp_path / "build.gradle.kts"
         build_file.write_text("plugins { }")
 
-        project_type, dep_file, dep_name = detect_project_type(str(tmp_path))
+        project_type, _dep_file, dep_name = detect_project_type(str(tmp_path))
         assert project_type == "gradle"
         assert dep_name == "build.gradle.kts"
 
@@ -235,7 +235,7 @@ class TestProjectUtils:
         build_file = tmp_path / "build.sbt"
         build_file.write_text('name := "test"')
 
-        project_type, dep_file, dep_name = detect_project_type(str(tmp_path))
+        project_type, _dep_file, dep_name = detect_project_type(str(tmp_path))
         assert project_type == "sbt"
         assert dep_name == "build.sbt"
 

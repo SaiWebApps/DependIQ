@@ -6,14 +6,9 @@ import os
 from typing import ClassVar
 
 from dotenv import load_dotenv
-from openai import OpenAI
 
 # Load environment variables from .env file (override=True so .env wins over stale shell exports)
 load_dotenv(override=True)
-
-
-# OpenAI client configuration
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 # Application settings
@@ -22,9 +17,6 @@ class Config:
 
     # Environment setting
     ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
-
-    # OpenAI settings
-    OPENAI_MODEL = "gpt-4o"
 
     # File upload settings
     MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
@@ -84,12 +76,6 @@ class Config:
     GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
     EMAIL_FROM = os.getenv("EMAIL_FROM", "noreply@example.com")
     EMAIL_FROM_NAME = os.getenv("EMAIL_FROM_NAME", "dependiq")
-
-    # File processing settings
-    MAX_ANALYZABLE_FILES = 20
-    MAX_PRIORITY_FILES = 15
-    MAX_STRUCTURE_SUMMARY = 50
-    MAX_DIRECTORIES = 30
 
     # Temporary file settings
     TEMP_DIR = "/tmp"

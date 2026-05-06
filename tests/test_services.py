@@ -178,14 +178,14 @@ class TestGitHubOAuthService:
     """Test GitHub OAuth service"""
 
     @pytest.mark.asyncio
-    async def test_get_authorization_url(self, test_db_session):
+    async def test_get_authorize_url(self, test_db_session):
         """Test generating GitHub authorization URL"""
         from app.services.github_oauth_service import GitHubOAuthService
 
         service = GitHubOAuthService(test_db_session)
         state = "random_state_string"
 
-        url = service.get_authorization_url(state)
+        url = service.get_authorize_url(state)
 
         assert "github.com/login/oauth/authorize" in url
         assert f"state={state}" in url
@@ -199,7 +199,6 @@ class TestGitHubOAuthService:
 
         service = GitHubOAuthService(test_db_session)
 
-        # Mock the HTTP client
         with patch("httpx.AsyncClient") as mock_client:
             mock_response = Mock()
             mock_response.status_code = 200
@@ -214,11 +213,30 @@ class TestGitHubOAuthService:
 
             result = await service.exchange_code_for_token("test_code")
 
-            assert result is not None
-            assert result["access_token"] == "gho_test_token"
+            assert result == "gho_test_token"
 
     @pytest.mark.asyncio
-    async def test_get_github_user_info_success(self, test_db_session):
+    async def test_exchange_code_for_token_failure(self, test_db_session):
+        """Test failed token exchange returns None"""
+        from app.services.github_oauth_service import GitHubOAuthService
+
+        service = GitHubOAuthService(test_db_session)
+
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = {"error": "bad_verification_code"}
+
+            mock_client.return_value.__aenter__.return_value.post = AsyncMock(
+                return_value=mock_response
+            )
+
+            result = await service.exchange_code_for_token("bad_code")
+
+            assert result is None
+
+    @pytest.mark.asyncio
+    async def test_get_github_user_success(self, test_db_session):
         """Test getting GitHub user info"""
         from app.services.github_oauth_service import GitHubOAuthService
 
@@ -226,8 +244,31 @@ class TestGitHubOAuthService:
 
         mock_user_data = {"id": 12345, "login": "testuser", "email": "test@example.com"}
 
+        with patch("httpx.AsyncClient") as mock_client:
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = mock_user_data
+
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
+
+            result = await service.get_github_user("test_token")
+
+            assert result is not None
+            assert result["id"] == 12345
+            assert result["email"] == "test@example.com"
+
+    @pytest.mark.asyncio
+    async def test_get_github_user_no_email_fetches_emails(self, test_db_session):
+        """Test fetching emails endpoint when user has no public email"""
+        from app.services.github_oauth_service import GitHubOAuthService
+
+        service = GitHubOAuthService(test_db_session)
+
+        mock_user_data = {"id": 12345, "login": "testuser", "email": None}
         mock_emails_data = [
-            {"email": "test@example.com", "primary": True, "verified": True}
+            {"email": "primary@example.com", "primary": True, "verified": True}
         ]
 
         with patch("httpx.AsyncClient") as mock_client:
@@ -246,63 +287,26 @@ class TestGitHubOAuthService:
 
             mock_client.return_value.__aenter__.return_value.get = mock_get
 
-            result = await service.get_github_user_info("test_token")
+            result = await service.get_github_user("test_token")
 
             assert result is not None
-            assert result["id"] == 12345
+            assert result["email"] == "primary@example.com"
 
     @pytest.mark.asyncio
-    async def test_link_github_account(self, test_db_session, test_user):
-        """Test linking GitHub account to user"""
+    async def test_get_or_create_user_new(self, test_db_session):
+        """Test creating a new user from GitHub data"""
         from app.services.github_oauth_service import GitHubOAuthService
 
         service = GitHubOAuthService(test_db_session)
 
-        github_data = {"id": 12345, "login": "testuser", "email": "github@example.com"}
+        github_user = {
+            "id": 99999,
+            "login": "newuser",
+            "email": "new@example.com",
+        }
 
-        connection = await service.link_github_account(
-            test_user, "access_token_here", github_data
-        )
+        user = await service.get_or_create_user(github_user, "access_token_123")
 
-        assert connection is not None
-        assert connection.provider == "github"
-        assert connection.provider_user_id == "12345"
-        assert connection.access_token == "access_token_here"
-
-    @pytest.mark.asyncio
-    async def test_get_active_github_token(self, test_db_session, test_user):
-        """Test getting active GitHub token"""
-        from app.services.github_oauth_service import GitHubOAuthService
-
-        service = GitHubOAuthService(test_db_session)
-
-        # Link account first
-        github_data = {"id": 12345, "login": "testuser", "email": "github@example.com"}
-
-        await service.link_github_account(test_user, "test_access_token", github_data)
-
-        # Retrieve token
-        token = await service.get_active_github_token(str(test_user.id))
-
-        assert token == "test_access_token"
-
-    @pytest.mark.asyncio
-    async def test_revoke_github_access(self, test_db_session, test_user):
-        """Test revoking GitHub access"""
-        from app.services.github_oauth_service import GitHubOAuthService
-
-        service = GitHubOAuthService(test_db_session)
-
-        # Link account first
-        github_data = {"id": 12345, "login": "testuser", "email": "github@example.com"}
-
-        await service.link_github_account(test_user, "test_access_token", github_data)
-
-        # Revoke access
-        result = await service.revoke_github_access(str(test_user.id))
-
-        assert result is True
-
-        # Verify token is gone
-        token = await service.get_active_github_token(str(test_user.id))
-        assert token is None
+        assert user is not None
+        assert user.email == "new@example.com"
+        assert user.email_verified is True

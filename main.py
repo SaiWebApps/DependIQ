@@ -150,7 +150,7 @@ async def startup_event():
     """Application startup tasks"""
     print("🚀 DependIQ application starting up...")
     print(f"📡 Max SSE iterations: {Config.MAX_SSE_ITERATIONS}")
-    print(f"🤖 AI Model: {Config.OPENAI_MODEL}")
+    print("🤖 AI: litellm agent layer (Anthropic/OpenAI/Ollama)")
 
 
 @app.on_event("shutdown")

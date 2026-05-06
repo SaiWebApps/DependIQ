@@ -175,7 +175,7 @@ class TestGitHubIntegrationWorkflow:
                 }
             ]
 
-            response = test_client.get("/api/github/repositories", headers=auth_headers)
+            response = test_client.get("/api/projects/github/repositories", headers=auth_headers)
 
             # May require GitHub connection or validation error
             assert response.status_code in [

@@ -183,14 +183,10 @@ async def jwt_error_handler(request: Request, exc: InvalidTokenError):
 
 
 async def http_exception_handler(request: Request, exc: HTTPException):
-    """Handle HTTPExceptions — preserve original status code instead of swallowing as 500."""
+    """Handle HTTPExceptions — preserve FastAPI's standard response format."""
     return JSONResponse(
         status_code=exc.status_code,
-        content={
-            "error": exc.detail,
-            "type": "http_error",
-            "status_code": exc.status_code,
-        },
+        content={"detail": exc.detail},
     )
 
 

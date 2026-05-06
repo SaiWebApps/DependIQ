@@ -12,8 +12,7 @@ import pytest
 
 from app.services.llm.agent import Agent, AgentResult
 from app.services.llm.router import ModelRouter, RoutingMode, TaskType
-from app.services.llm.tools import ToolRegistry, ToolDefinition
-
+from app.services.llm.tools import ToolDefinition, ToolRegistry
 
 # --- Helpers to build mock litellm responses ---
 

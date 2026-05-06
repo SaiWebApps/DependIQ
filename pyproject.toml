@@ -1,7 +1,3 @@
-[build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "dependiq"
 version = "0.2.0"
@@ -29,20 +25,15 @@ dependencies = [
     "alembic>=1.14.0",
     "greenlet>=3.0.3",
     "bcrypt>=4.1.2",
-    "passlib[bcrypt]>=1.7.4",
     "pyjwt>=2.8.0",
     "email-validator>=2.1.0",
     "pydantic[email]>=2.5.0",
 ]
 
-[tool.setuptools]
-packages = ["app", "app.api", "app.middleware", "app.models", "app.services", "app.services.llm", "app.utils"]
-
 [dependency-groups]
 dev = [
     "ruff>=0.4.0",
     "mypy>=1.8.0",
-    "pre-commit>=3.6.0",
     "pytest>=8.4.2",
     "pytest-asyncio>=0.23.0",
     "pytest-cov>=4.1.0",
@@ -79,9 +70,10 @@ select = [
     "T20", # flake8-print
     "SIM", # flake8-simplify
     "RUF", # Ruff-specific rules
+    "I",   # isort
 ]
 ignore = [
-    "E501",  # line too long (handled by black)
+    "E501",  # line too long (handled by formatter)
     "B008",  # do not perform function calls in argument defaults
     "S101",  # use of assert (ok in tests)
     "T201",  # print statements (ok for this project)
@@ -103,15 +95,14 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"test_*.py" = ["B018", "S101", "S105", "S106", "S107"]  # Allow test fixtures with tokens/passwords
-"tests/*.py" = ["S105", "S106", "S107"]  # Allow hardcoded test data in all test files
-"app/api/auth.py" = ["S106"]  # token_type parameter is not a password
-"app/middleware/*.py" = ["S106"]  # token_type parameter is not a password
-"app/services/auth_service.py" = ["S106"]  # token_type parameter is not a password
-"app/services/token_service.py" = ["S107"]  # token_type default is not a password
-"app/services/github_oauth.py" = ["S105"]  # URL string is not a password
-"app/services/github_oauth_service.py" = ["S105"]  # URL constant is not a password
-
+"test_*.py" = ["B018", "S101", "S105", "S106", "S107"]
+"tests/*.py" = ["S105", "S106", "S107"]
+"app/api/auth.py" = ["S106"]
+"app/middleware/*.py" = ["S106"]
+"app/services/auth_service.py" = ["S106"]
+"app/services/token_service.py" = ["S107"]
+"app/services/github_oauth.py" = ["S105"]
+"app/services/github_oauth_service.py" = ["S105"]
 
 [tool.ruff.format]
 quote-style = "double"

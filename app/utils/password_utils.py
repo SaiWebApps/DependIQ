@@ -1,43 +1,23 @@
 """
-Password hashing and verification utilities
+Password hashing and verification utilities using bcrypt directly.
 """
 
-from passlib.context import CryptContext
-
-# Configure bcrypt for password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+import bcrypt
 
 
 def hash_password(password: str) -> str:
-    """
-    Hash a password using bcrypt
-
-    Args:
-        password: Plain text password
-
-    Returns:
-        Hashed password string
-    """
-    return pwd_context.hash(password)
+    """Hash a password using bcrypt."""
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """
-    Verify a password against a hash
-
-    Args:
-        plain_password: Plain text password to verify
-        hashed_password: Hashed password to compare against
-
-    Returns:
-        True if password matches, False otherwise
-    """
-    return pwd_context.verify(plain_password, hashed_password)
+    """Verify a password against a bcrypt hash."""
+    return bcrypt.checkpw(plain_password.encode(), hashed_password.encode())
 
 
 def validate_password_strength(password: str) -> tuple[bool, str]:
     """
-    Validate password strength
+    Validate password strength.
 
     Requirements:
     - Minimum 8 characters
@@ -45,12 +25,6 @@ def validate_password_strength(password: str) -> tuple[bool, str]:
     - At least one lowercase letter
     - At least one number
     - At least one special character
-
-    Args:
-        password: Password to validate
-
-    Returns:
-        Tuple of (is_valid, error_message)
     """
     if len(password) < 8:
         return False, "Password must be at least 8 characters long"

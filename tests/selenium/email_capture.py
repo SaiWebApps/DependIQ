@@ -7,7 +7,6 @@ import asyncio
 import os
 import re
 import time
-from typing import Optional
 
 import httpx
 
@@ -27,7 +26,7 @@ class EmailCaptureService:
 
         # mail.tm configuration (free service - no API key needed!)
         self.use_mailtm = os.getenv("USE_MAILTM", "true").lower() == "true"
-        
+
         # Test email domain
         self.test_email_domain = os.getenv("TEST_EMAIL_DOMAIN", "")
 
@@ -60,7 +59,7 @@ class EmailCaptureService:
         if self.service == "mailtm":
             # Create account on mail.tm
             return await self._create_mailtm_account(base_email)
-        
+
         if not self.test_email_domain:
             raise ValueError("TEST_EMAIL_DOMAIN not configured")
 
@@ -73,7 +72,7 @@ class EmailCaptureService:
 
     async def wait_for_email(
         self, to_email: str, subject_contains: str = "", timeout: int = 30
-    ) -> Optional[dict]:
+    ) -> dict | None:
         """
         Wait for an email to arrive in the test inbox
 
@@ -104,123 +103,139 @@ class EmailCaptureService:
         """Create a temporary email account on mail.tm (free service)"""
         import random
         import string
-        
+
         # Retry up to 3 times in case of rate limiting
         max_retries = 3
         for attempt in range(max_retries):
             try:
                 async with httpx.AsyncClient() as client:
                     # Get available domains
-                    response = await client.get("https://api.mail.tm/domains", timeout=10.0)
+                    response = await client.get(
+                        "https://api.mail.tm/domains", timeout=10.0
+                    )
                     if response.status_code != 200:
                         if attempt < max_retries - 1:
                             await asyncio.sleep(2)
                             continue
                         raise ValueError("Failed to get mail.tm domains")
-                    
+
                     domains = response.json()
                     if not domains or "hydra:member" not in domains:
                         raise ValueError("No domains available from mail.tm")
-                    
+
                     domain = domains["hydra:member"][0]["domain"]
-                    
+
                     # Create random email with longer suffix to avoid conflicts
-                    random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=12))
+                    random_suffix = "".join(
+                        random.choices(string.ascii_lowercase + string.digits, k=12)
+                    )
                     email_address = f"{base_name}_{random_suffix}@{domain}"
-                    password = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
-                    
+                    password = "".join(
+                        random.choices(string.ascii_letters + string.digits, k=16)
+                    )
+
                     # Create account
                     response = await client.post(
                         "https://api.mail.tm/accounts",
                         json={"address": email_address, "password": password},
-                        timeout=10.0
+                        timeout=10.0,
                     )
-                    
+
                     if response.status_code != 201:
                         if attempt < max_retries - 1:
                             await asyncio.sleep(2)
                             continue
-                        raise ValueError(f"Failed to create mail.tm account after {max_retries} attempts")
-                    
+                        raise ValueError(
+                            f"Failed to create mail.tm account after {max_retries} attempts"
+                        )
+
                     # Get auth token
                     response = await client.post(
                         "https://api.mail.tm/token",
                         json={"address": email_address, "password": password},
-                        timeout=10.0
+                        timeout=10.0,
                     )
-                    
+
                     if response.status_code != 200:
                         raise ValueError("Failed to authenticate with mail.tm")
-                    
+
                     token_data = response.json()
                     self.mailtm_token = token_data.get("token")
                     self.mailtm_account_id = token_data.get("id")
-                    
+
                     print(f"📧 Created mail.tm account: {email_address}")
                     return email_address
-                    
-            except Exception as e:
+
+            except Exception:
                 if attempt < max_retries - 1:
                     print(f"⚠ mail.tm attempt {attempt + 1} failed, retrying...")
                     await asyncio.sleep(2)
                     continue
                 raise
-        
-        raise ValueError(f"Failed to create mail.tm account after {max_retries} attempts")
+
+        raise ValueError(
+            f"Failed to create mail.tm account after {max_retries} attempts"
+        )
 
     async def _wait_for_email_mailtm(
         self, to_email: str, subject_contains: str, timeout: int
-    ) -> Optional[dict]:
+    ) -> dict | None:
         """Wait for email using mail.tm API (free service)"""
         if not self.mailtm_token:
             raise ValueError("mail.tm token not available - account not created")
-        
+
         async with httpx.AsyncClient() as client:
             start_time = time.time()
-            
+
             while time.time() - start_time < timeout:
                 try:
                     # Get messages
                     response = await client.get(
                         "https://api.mail.tm/messages",
                         headers={"Authorization": f"Bearer {self.mailtm_token}"},
-                        timeout=10.0
+                        timeout=10.0,
                     )
-                    
+
                     if response.status_code == 200:
                         data = response.json()
                         messages = data.get("hydra:member", [])
-                        
+
                         # Find matching email
                         for msg in messages:
                             msg_to_list = msg.get("to", [])
-                            msg_to = msg_to_list[0].get("address", "") if msg_to_list else ""
+                            msg_to = (
+                                msg_to_list[0].get("address", "") if msg_to_list else ""
+                            )
                             subject = msg.get("subject", "")
-                            
-                            if to_email.lower() == msg_to.lower():
-                                if not subject_contains or subject_contains.lower() in subject.lower():
-                                    # Get full message
-                                    msg_id = msg.get("id")
-                                    msg_response = await client.get(
-                                        f"https://api.mail.tm/messages/{msg_id}",
-                                        headers={"Authorization": f"Bearer {self.mailtm_token}"},
-                                        timeout=10.0
-                                    )
-                                    
-                                    if msg_response.status_code == 200:
-                                        return msg_response.json()
-                
+
+                            if to_email.lower() == msg_to.lower() and (
+                                not subject_contains
+                                or subject_contains.lower() in subject.lower()
+                            ):
+                                # Get full message
+                                msg_id = msg.get("id")
+                                msg_response = await client.get(
+                                    f"https://api.mail.tm/messages/{msg_id}",
+                                    headers={
+                                        "Authorization": f"Bearer {self.mailtm_token}"
+                                    },
+                                    timeout=10.0,
+                                )
+
+                                if msg_response.status_code == 200:
+                                    return msg_response.json()
+
                 except Exception as e:
                     print(f"Error checking mail.tm: {e}")
-                
+
                 # Wait before next check
                 await asyncio.sleep(2)
-            
+
             return None
 
     async def _wait_for_email_mailosaur(
         self, to_email: str, subject_contains: str, timeout: int
-    ) -> Optional[dict]:
+    ) -> dict | None:
         """Wait for email using Mailosaur API"""
         async with httpx.AsyncClient() as client:
             start_time = time.time()
@@ -229,7 +244,7 @@ class EmailCaptureService:
                 try:
                     # Search for messages
                     response = await client.get(
-                        f"https://mailosaur.com/api/messages",
+                        "https://mailosaur.com/api/messages",
                         params={
                             "server": self.mailosaur_server_id,
                             "receivedAfter": time.strftime(
@@ -252,18 +267,22 @@ class EmailCaptureService:
 
                             subject = msg.get("subject", "")
 
-                            if to_email.lower() in [e.lower() for e in msg_to_emails]:
-                                if not subject_contains or subject_contains.lower() in subject.lower():
-                                    # Get full message details
-                                    msg_id = msg.get("id")
-                                    msg_response = await client.get(
-                                        f"https://mailosaur.com/api/messages/{msg_id}",
-                                        auth=(self.mailosaur_api_key, ""),
-                                        timeout=10.0,
-                                    )
+                            if to_email.lower() in [
+                                e.lower() for e in msg_to_emails
+                            ] and (
+                                not subject_contains
+                                or subject_contains.lower() in subject.lower()
+                            ):
+                                # Get full message details
+                                msg_id = msg.get("id")
+                                msg_response = await client.get(
+                                    f"https://mailosaur.com/api/messages/{msg_id}",
+                                    auth=(self.mailosaur_api_key, ""),
+                                    timeout=10.0,
+                                )
 
-                                    if msg_response.status_code == 200:
-                                        return msg_response.json()
+                                if msg_response.status_code == 200:
+                                    return msg_response.json()
 
                 except Exception as e:
                     print(f"Error checking Mailosaur: {e}")
@@ -275,7 +294,7 @@ class EmailCaptureService:
 
     async def _wait_for_email_mailtrap(
         self, to_email: str, subject_contains: str, timeout: int
-    ) -> Optional[dict]:
+    ) -> dict | None:
         """Wait for email using Mailtrap API"""
         async with httpx.AsyncClient() as client:
             start_time = time.time()
@@ -297,19 +316,23 @@ class EmailCaptureService:
                             msg_to_emails = [msg.get("to_email", "")]
                             subject = msg.get("subject", "")
 
-                            if to_email.lower() in [e.lower() for e in msg_to_emails]:
-                                if not subject_contains or subject_contains.lower() in subject.lower():
-                                    # Get full message
-                                    msg_id = msg.get("id")
-                                    msg_response = await client.get(
-                                        f"https://mailtrap.io/api/accounts/{self.mailtrap_inbox_id}/inboxes/{self.mailtrap_inbox_id}/messages/{msg_id}/body.html",
-                                        headers={"Api-Token": self.mailtrap_api_token},
-                                        timeout=10.0,
-                                    )
+                            if to_email.lower() in [
+                                e.lower() for e in msg_to_emails
+                            ] and (
+                                not subject_contains
+                                or subject_contains.lower() in subject.lower()
+                            ):
+                                # Get full message
+                                msg_id = msg.get("id")
+                                msg_response = await client.get(
+                                    f"https://mailtrap.io/api/accounts/{self.mailtrap_inbox_id}/inboxes/{self.mailtrap_inbox_id}/messages/{msg_id}/body.html",
+                                    headers={"Api-Token": self.mailtrap_api_token},
+                                    timeout=10.0,
+                                )
 
-                                    if msg_response.status_code == 200:
-                                        msg["html_body"] = msg_response.text
-                                        return msg
+                                if msg_response.status_code == 200:
+                                    msg["html_body"] = msg_response.text
+                                    return msg
 
                 except Exception as e:
                     print(f"Error checking Mailtrap: {e}")
@@ -319,7 +342,7 @@ class EmailCaptureService:
 
             return None
 
-    def extract_magic_link(self, email_data: dict) -> Optional[str]:
+    def extract_magic_link(self, email_data: dict) -> str | None:
         """
         Extract magic link URL from email
 
@@ -337,7 +360,7 @@ class EmailCaptureService:
             return self._extract_link_mailtm(email_data, "magic-link-register")
         return None
 
-    def extract_temp_password(self, email_data: dict) -> Optional[str]:
+    def extract_temp_password(self, email_data: dict) -> str | None:
         """
         Extract temporary password from email
 
@@ -361,54 +384,64 @@ class EmailCaptureService:
 
     def _extract_link_mailosaur(
         self, email_data: dict, url_contains: str
-    ) -> Optional[str]:
+    ) -> str | None:
         """Extract URL from Mailosaur email data"""
         html_body = email_data.get("html", {}).get("body", "")
         text_body = email_data.get("text", {}).get("body", "")
 
         # Try to find link in HTML
         if html_body:
-            match = re.search(r'href="([^"]*' + re.escape(url_contains) + r'[^"]*)"', html_body)
+            match = re.search(
+                r'href="([^"]*' + re.escape(url_contains) + r'[^"]*)"', html_body
+            )
             if match:
                 return match.group(1)
 
         # Try to find link in text
         if text_body:
-            match = re.search(r"https?://[^\s]*" + re.escape(url_contains) + r"[^\s]*", text_body)
+            match = re.search(
+                r"https?://[^\s]*" + re.escape(url_contains) + r"[^\s]*", text_body
+            )
             if match:
                 return match.group(0)
 
         return None
 
-    def _extract_link_mailtrap(
-        self, email_data: dict, url_contains: str
-    ) -> Optional[str]:
+    def _extract_link_mailtrap(self, email_data: dict, url_contains: str) -> str | None:
         """Extract URL from Mailtrap email data"""
         html_body = email_data.get("html_body", "")
 
         if html_body:
-            match = re.search(r'href="([^"]*' + re.escape(url_contains) + r'[^"]*)"', html_body)
+            match = re.search(
+                r'href="([^"]*' + re.escape(url_contains) + r'[^"]*)"', html_body
+            )
             if match:
                 return match.group(1)
 
         return None
 
-    def _extract_link_mailtm(
-        self, email_data: dict, url_contains: str
-    ) -> Optional[str]:
+    def _extract_link_mailtm(self, email_data: dict, url_contains: str) -> str | None:
         """Extract URL from mail.tm email data"""
-        html_body = email_data.get("html", [""])[0] if isinstance(email_data.get("html"), list) else email_data.get("html", "")
+        html_body = (
+            email_data.get("html", [""])[0]
+            if isinstance(email_data.get("html"), list)
+            else email_data.get("html", "")
+        )
         text_body = email_data.get("text", "")
 
         # Try HTML first
         if html_body:
-            match = re.search(r'href="([^"]*' + re.escape(url_contains) + r'[^"]*)"', html_body)
+            match = re.search(
+                r'href="([^"]*' + re.escape(url_contains) + r'[^"]*)"', html_body
+            )
             if match:
                 return match.group(1)
 
         # Try text body
         if text_body:
-            match = re.search(r"https?://[^\s]*" + re.escape(url_contains) + r"[^\s]*", text_body)
+            match = re.search(
+                r"https?://[^\s]*" + re.escape(url_contains) + r"[^\s]*", text_body
+            )
             if match:
                 return match.group(0)
 

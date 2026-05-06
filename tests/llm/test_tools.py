@@ -5,8 +5,8 @@ Tests the tool registry, schema generation, and actual HTTP-backed executors
 against live registries (integration) and mocked responses (unit).
 """
 
-import pytest
 import httpx
+import pytest
 import respx
 
 from app.services.llm.tools import (
@@ -15,10 +15,9 @@ from app.services.llm.tools import (
     ToolRegistry,
     create_default_registry,
     fetch_package_versions,
-    web_fetch,
     search_web,
+    web_fetch,
 )
-
 
 # --- Unit tests: ToolRegistry ---
 

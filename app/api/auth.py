@@ -168,7 +168,7 @@ async def send_magic_link(
     """
     auth_service = AuthService(db)
 
-    token, error = await auth_service.send_magic_link(email=request.email)
+    _token, error = await auth_service.send_magic_link(email=request.email)
 
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
@@ -302,7 +302,7 @@ async def verify_email_get(token: str, db: AsyncSession = Depends(get_db)):
     from fastapi.responses import RedirectResponse
 
     auth_service = AuthService(db)
-    success, error = await auth_service.verify_email(token=token)
+    _success, error = await auth_service.verify_email(token=token)
 
     if error:
         # Redirect to login with error message
@@ -323,7 +323,7 @@ async def verify_email_post(
     """
     auth_service = AuthService(db)
 
-    success, error = await auth_service.verify_email(token=request.token)
+    _success, error = await auth_service.verify_email(token=request.token)
 
     if error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
@@ -344,7 +344,7 @@ async def forgot_password(
     """
     auth_service = AuthService(db)
 
-    token, error = await auth_service.request_password_reset(email=request.email)
+    _token, _error = await auth_service.request_password_reset(email=request.email)
 
     # Always return success message to prevent email enumeration
     return MessageResponse(
@@ -365,7 +365,7 @@ async def reset_password(
     """
     auth_service = AuthService(db)
 
-    success, error = await auth_service.reset_password(
+    _success, error = await auth_service.reset_password(
         token=request.token,
         new_password=request.new_password,
         confirm_password=request.confirm_password,
@@ -392,7 +392,7 @@ async def change_password(
     """
     auth_service = AuthService(db)
 
-    success, error = await auth_service.change_password(
+    _success, error = await auth_service.change_password(
         user_id=str(current_user.id),
         current_password=request.current_password,
         new_password=request.new_password,

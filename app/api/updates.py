@@ -18,7 +18,7 @@ from starlette.background import BackgroundTask
 from ..config import Config
 from ..database import AsyncSessionLocal
 from ..models.dependency import Dependency
-from ..services.ai_service import (
+from ..services.dependency_agent import (
     update_dependency_file_with_gpt,
     update_entire_project_with_gpt,
     update_entire_project_with_gpt_with_progress,

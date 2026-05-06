@@ -20,11 +20,11 @@ from ..config import Config
 from ..database import AsyncSessionLocal, get_db
 from ..middleware import get_current_user
 from ..models import User
-from ..services.ai_service import (
+from ..services.dependency_agent import (
     extract_dependencies_with_gpt,
     identify_artifacts_with_gpt,
+    research_latest_versions,
 )
-from ..services.dependency_agent import research_latest_versions
 from ..services.progress_service import (
     analysis_status,
     create_analysis_stream,

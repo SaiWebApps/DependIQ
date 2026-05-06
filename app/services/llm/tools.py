@@ -8,9 +8,9 @@ This prevents hallucinated endpoints while letting the LLM drive research.
 
 import asyncio
 import os
+from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
 from typing import Any
-from collections.abc import Callable, Coroutine
 
 import httpx
 

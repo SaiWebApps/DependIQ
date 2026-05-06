@@ -94,7 +94,7 @@ class TestGitHubAPI:
 
     def test_github_repositories_requires_auth(self, test_client):
         """Test that GitHub repositories endpoint requires authentication or validation"""
-        response = test_client.get("/api/github/repositories")
+        response = test_client.get("/api/projects/github/repositories")
         assert response.status_code in [
             status.HTTP_401_UNAUTHORIZED,
             status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -115,7 +115,7 @@ class TestGitHubAPI:
                 }
             ]
 
-            response = test_client.get("/api/github/repositories", headers=auth_headers)
+            response = test_client.get("/api/projects/github/repositories", headers=auth_headers)
 
             # May fail if no GitHub token is linked or validation error
             assert response.status_code in [
