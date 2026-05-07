@@ -34,13 +34,13 @@ services:
         value: resend
       - key: EMAIL_FROM
         value: onboarding@resend.dev
-      # Secrets — set these once in Render dashboard
+      # Secrets — set once via Render API, never regenerated
       - key: JWT_SECRET_KEY
-        generateValue: true
+        sync: false
       - key: SECRET_KEY
-        generateValue: true
+        sync: false
       - key: SESSION_SECRET
-        generateValue: true
+        sync: false
       - key: OPENAI_API_KEY
         sync: false
       - key: ANTHROPIC_API_KEY
