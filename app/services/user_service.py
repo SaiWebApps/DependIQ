@@ -8,7 +8,7 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models import OAuthConnection, ProjectHistory, UserPreference
+from ..models import ProjectHistory, UserPreference
 
 
 class UserService:
@@ -166,98 +166,3 @@ class UserService:
 
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
-
-    async def get_or_create_oauth_connection(
-        self,
-        user_id: str,
-        provider: str,
-        provider_user_id: str,
-        provider_email: str | None,
-        access_token: str,
-        refresh_token: str | None = None,
-        scopes: str | None = None,
-        provider_data: dict | None = None,
-    ) -> OAuthConnection:
-        """
-        Get existing OAuth connection or create new one
-
-        Args:
-            user_id: User ID
-            provider: OAuth provider name
-            provider_user_id: User ID from OAuth provider
-            provider_email: Email from OAuth provider
-            access_token: OAuth access token
-            refresh_token: Optional refresh token
-            scopes: OAuth scopes granted
-            provider_data: Additional provider-specific data
-
-        Returns:
-            OAuthConnection object
-        """
-        # Convert string UUID to UUID object if needed
-        user_uuid = uuid.UUID(user_id) if isinstance(user_id, str) else user_id
-
-        # Check if connection already exists for this user and provider
-        result = await self.db.execute(
-            select(OAuthConnection).where(
-                OAuthConnection.user_id == user_uuid,
-                OAuthConnection.provider == provider,
-            )
-        )
-        connection = result.scalar_one_or_none()
-
-        if connection:
-            # Update existing connection
-            connection.provider_email = provider_email
-            connection.access_token = access_token
-            connection.refresh_token = refresh_token
-            connection.scopes = scopes
-            connection.provider_data = provider_data
-        else:
-            # Create new connection
-            connection = OAuthConnection(
-                user_id=user_uuid,
-                provider=provider,
-                provider_user_id=provider_user_id,
-                provider_email=provider_email,
-                access_token=access_token,
-                refresh_token=refresh_token,
-                scopes=scopes,
-                provider_data=provider_data,
-            )
-            self.db.add(connection)
-
-        await self.db.commit()
-        await self.db.refresh(connection)
-
-        return connection
-
-    async def unlink_oauth_connection(self, user_id: str, provider: str) -> bool:
-        """
-        Unlink OAuth connection
-
-        Args:
-            user_id: User ID
-            provider: OAuth provider name
-
-        Returns:
-            True if connection was removed, False if not found
-        """
-        # Convert string UUID to UUID object if needed
-        user_uuid = uuid.UUID(user_id) if isinstance(user_id, str) else user_id
-
-        result = await self.db.execute(
-            select(OAuthConnection).where(
-                OAuthConnection.user_id == user_uuid,
-                OAuthConnection.provider == provider,
-            )
-        )
-        connection = result.scalar_one_or_none()
-
-        if not connection:
-            return False
-
-        await self.db.delete(connection)
-        await self.db.commit()
-
-        return True

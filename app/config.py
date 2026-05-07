@@ -40,42 +40,22 @@ class Config:
     else:
         DATABASE_URL = _db_url
 
-    # JWT settings
-    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev-jwt-secret-change-in-production")
-    JWT_ALGORITHM = "HS256"
-    JWT_ACCESS_TOKEN_EXPIRE_MINUTES = int(
-        os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "15")
+    # WorkOS AuthKit settings
+    WORKOS_API_KEY = os.getenv("WORKOS_API_KEY", "")
+    WORKOS_CLIENT_ID = os.getenv("WORKOS_CLIENT_ID", "")
+    WORKOS_REDIRECT_URI = os.getenv(
+        "WORKOS_REDIRECT_URI", "http://localhost:8000/api/auth/callback"
     )
-    JWT_REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("JWT_REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 
     # Application URL
     APP_URL = os.getenv("APP_URL", "http://localhost:8000")
 
-    # GitHub OAuth settings
-    GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID")
-    GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET")
-    GITHUB_REDIRECT_URI = os.getenv(
-        "GITHUB_REDIRECT_URI", "http://localhost:8000/api/auth/github/callback"
-    )
-
     # Session security
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-change-in-production")
-    SESSION_SECRET = os.getenv(
-        "SESSION_SECRET", "dev-session-secret-change-in-production"
-    )
     SECURE_COOKIES = os.getenv("SECURE_COOKIES", "false").lower() == "true"
 
     # GitHub API settings
     GITHUB_API_BASE = "https://api.github.com"
-    GITHUB_OAUTH_SCOPES = "repo,user:email"  # Access to repos and email
-
-    # Email settings (optional - for verification/reset emails)
-    EMAIL_SERVICE = os.getenv("EMAIL_SERVICE", "gmail")  # gmail or sendgrid
-    SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
-    GMAIL_USER = os.getenv("GMAIL_USER")
-    GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
-    EMAIL_FROM = os.getenv("EMAIL_FROM", "noreply@example.com")
-    EMAIL_FROM_NAME = os.getenv("EMAIL_FROM_NAME", "dependiq")
 
     # Temporary file settings
     TEMP_DIR = "/tmp"

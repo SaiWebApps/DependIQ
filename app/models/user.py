@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, String
+from sqlalchemy import Boolean, DateTime, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -14,18 +14,16 @@ from ..database import Base
 
 if TYPE_CHECKING:
     from .job import Job
-    from .oauth_connection import OAuthConnection
     from .project_history import ProjectHistory
     from .project_library import ProjectLibrary
     from .user_preference import UserPreference
-    from .user_session import UserSession
 
 
 class User(Base):
     """
     User account model
 
-    Supports both email/password and OAuth-only accounts
+    Supports WorkOS AuthKit authentication with provider OAuth tokens.
     """
 
     __tablename__ = "users"
@@ -35,14 +33,24 @@ class User(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
 
+    # WorkOS integration
+    workos_user_id: Mapped[str | None] = mapped_column(
+        String(255), unique=True, nullable=True, index=True
+    )
+
     # Authentication
     email: Mapped[str] = mapped_column(
         String(255), unique=True, nullable=False, index=True
     )
     password_hash: Mapped[str | None] = mapped_column(
-        String(255), nullable=True  # NULL for OAuth-only users
+        String(255), nullable=True  # Kept nullable for migration safety; no longer used
     )
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    # Provider OAuth tokens (stored after WorkOS callback)
+    github_access_token: Mapped[str | None] = mapped_column(Text, nullable=True)
+    gitlab_access_token: Mapped[str | None] = mapped_column(Text, nullable=True)
+    bitbucket_access_token: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Account status
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
@@ -57,9 +65,6 @@ class User(Base):
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Relationships
-    oauth_connections: Mapped[list["OAuthConnection"]] = relationship(
-        "OAuthConnection", back_populates="user", cascade="all, delete-orphan"
-    )
     preferences: Mapped["UserPreference"] = relationship(
         "UserPreference",
         back_populates="user",
@@ -74,9 +79,6 @@ class User(Base):
     )
     jobs: Mapped[list["Job"]] = relationship(
         "Job", back_populates="user", cascade="all, delete-orphan"
-    )
-    sessions: Mapped[list["UserSession"]] = relationship(
-        "UserSession", back_populates="user", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:

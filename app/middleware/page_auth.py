@@ -3,21 +3,18 @@ Page-level authentication middleware for HTML page routes.
 Unlike API authentication, this redirects to login instead of returning 401.
 """
 
-import uuid
-
 from fastapi import HTTPException, Request, status
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import User
-from ..services.token_service import verify_token
+from ..services.workos_auth import get_current_user_from_cookie as workos_get_user
 
 
 async def get_current_user_from_cookie(
     request: Request, db: AsyncSession
 ) -> User | None:
     """
-    Get current user from JWT token in Authorization header or cookie.
+    Get current user from the dependiq_session cookie.
     Returns None if not authenticated (for optional auth).
 
     Args:
@@ -27,43 +24,7 @@ async def get_current_user_from_cookie(
     Returns:
         User object or None
     """
-    # Try to get token from Authorization header first
-    auth_header = request.headers.get("Authorization")
-    token = None
-
-    if auth_header and auth_header.startswith("Bearer "):
-        token = auth_header.replace("Bearer ", "")
-
-    # If no token in header, try cookie
-    if not token:
-        token = request.cookies.get("access_token")
-
-    if not token:
-        return None
-
-    # Verify token
-    payload = verify_token(token, token_type="access")
-    if not payload:
-        return None
-
-    user_id = payload.get("sub")
-    if not user_id:
-        return None
-
-    # Convert string UUID from JWT to UUID object for PostgreSQL comparison
-    try:
-        user_uuid = uuid.UUID(user_id)
-    except (ValueError, AttributeError):
-        return None
-
-    # Get user from database
-    result = await db.execute(select(User).where(User.id == user_uuid))
-    user = result.scalar_one_or_none()
-
-    if not user or not user.is_active:
-        return None
-
-    return user
+    return await workos_get_user(request, db)
 
 
 async def require_auth(request: Request, db: AsyncSession):
@@ -79,7 +40,7 @@ async def require_auth(request: Request, db: AsyncSession):
         User object
 
     Raises:
-        RedirectResponse: Redirects to login if not authenticated
+        HTTPException 303: Redirects to login if not authenticated
     """
     user = await get_current_user_from_cookie(request, db)
 

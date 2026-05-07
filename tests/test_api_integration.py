@@ -84,13 +84,17 @@ class TestFilesAPI:
 class TestGitHubAPI:
     """Test GitHub integration API endpoints"""
 
-    def test_github_auth_redirect(self, test_client):
-        """Test GitHub OAuth redirect"""
-        response = test_client.get("/api/auth/github", allow_redirects=False)
+    def test_github_login_redirect(self, test_client):
+        """Test GitHub OAuth redirect via WorkOS"""
+        with patch("app.api.auth.get_authorization_url") as mock_url:
+            mock_url.return_value = "https://authkit.workos.com/auth"
+            response = test_client.get(
+                "/api/auth/login?provider=GitHubOAuth",
+                follow_redirects=False,
+            )
 
-        # Should redirect to GitHub
-        assert response.status_code in [302, 307]
-        assert "location" in response.headers
+        # Should redirect to WorkOS
+        assert response.status_code == 302
 
     def test_github_repositories_requires_auth(self, test_client):
         """Test that GitHub repositories endpoint requires authentication or validation"""
@@ -216,81 +220,26 @@ class TestUserAPI:
         assert isinstance(data, list)
 
 
-class TestAuthAPIIntegration:
-    """Integration tests for authentication API"""
+class TestAuthAPI:
+    """Test WorkOS AuthKit authentication API"""
 
-    def test_complete_registration_login_flow(self, test_client):
-        """Test complete registration and login flow"""
-        # 1. Register new user
-        register_data = {
-            "email": "integration@example.com",
-            "password": "IntegrationTest123!",
-            "confirm_password": "IntegrationTest123!",
-        }
+    def test_login_endpoint_exists(self, test_client):
+        """Test that login endpoint redirects"""
+        with patch("app.api.auth.get_authorization_url") as mock_url:
+            mock_url.return_value = "https://authkit.workos.com/auth"
+            response = test_client.get("/api/auth/login", follow_redirects=False)
+        assert response.status_code == 302
 
-        register_response = test_client.post("/api/auth/register", json=register_data)
-        assert register_response.status_code == status.HTTP_201_CREATED
+    def test_logout_endpoint(self, test_client):
+        """Test logout clears session"""
+        response = test_client.post("/api/auth/logout")
+        assert response.status_code == 200
+        assert "dependiq_session" in response.headers.get("set-cookie", "")
 
-        # 2. Login with new credentials
-        login_response = test_client.post(
-            "/api/auth/login",
-            json={
-                "email": "integration@example.com",
-                "password": "IntegrationTest123!",
-            },
-        )
-
-        assert login_response.status_code == status.HTTP_200_OK
-        tokens = login_response.json()
-        assert "access_token" in tokens
-        assert "refresh_token" in tokens
-
-        # 3. Access protected endpoint
-        auth_headers = {"Authorization": f"Bearer {tokens['access_token']}"}
-        profile_response = test_client.get("/api/user/profile", headers=auth_headers)
-        assert profile_response.status_code == status.HTTP_200_OK
-
-    def test_token_refresh_flow(self, test_client, test_user):
-        """Test token refresh flow"""
-        # Login to get tokens
-        login_response = test_client.post(
-            "/api/auth/login",
-            json={"email": "test@example.com", "password": "TestPassword123!"},
-        )
-
-        assert login_response.status_code == status.HTTP_200_OK
-        tokens = login_response.json()
-
-        # Refresh token
-        refresh_response = test_client.post(
-            "/api/auth/refresh", json={"refresh_token": tokens["refresh_token"]}
-        )
-
-        assert refresh_response.status_code == status.HTTP_200_OK
-        new_tokens = refresh_response.json()
-        assert "access_token" in new_tokens
-
-    def test_password_change_flow(self, test_client, auth_headers):
-        """Test password change flow"""
-        response = test_client.post(
-            "/api/auth/change-password",
-            headers=auth_headers,
-            json={
-                "current_password": "TestPassword123!",
-                "new_password": "NewTestPassword456!",
-                "confirm_password": "NewTestPassword456!",
-            },
-        )
-
-        assert response.status_code == status.HTTP_200_OK
-
-        # Verify can login with new password
-        login_response = test_client.post(
-            "/api/auth/login",
-            json={"email": "test@example.com", "password": "NewTestPassword456!"},
-        )
-
-        assert login_response.status_code == status.HTTP_200_OK
+    def test_me_requires_auth(self, test_client):
+        """Test /api/auth/me requires authentication"""
+        response = test_client.get("/api/auth/me")
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 class TestAPIErrorHandling:
@@ -300,23 +249,6 @@ class TestAPIErrorHandling:
         """Test 404 error for nonexistent endpoint"""
         response = test_client.get("/api/nonexistent/endpoint")
         assert response.status_code == status.HTTP_404_NOT_FOUND
-
-    def test_validation_error_handling(self, test_client):
-        """Test validation error handling"""
-        # Send invalid registration data
-        response = test_client.post(
-            "/api/auth/register",
-            json={
-                "email": "not-an-email",
-                "password": "short",
-                "confirm_password": "short",
-            },
-        )
-
-        assert response.status_code in [
-            status.HTTP_400_BAD_REQUEST,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
-        ]
 
     def test_method_not_allowed(self, test_client):
         """Test method not allowed error"""

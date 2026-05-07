@@ -3,6 +3,7 @@ Pytest configuration and fixtures for testing
 """
 
 import asyncio
+import os
 from collections.abc import AsyncGenerator, Generator
 
 import pytest
@@ -13,8 +14,18 @@ from sqlalchemy.pool import StaticPool
 
 from app.database import Base, get_db
 from app.models import User
-from app.utils.password_utils import hash_password
 from main import app
+
+# Test-only identifiers loaded from environment with fallback for CI
+TEST_WORKOS_USER_ID = os.getenv("TEST_WORKOS_USER_ID", "user_test_placeholder")
+TEST_GITHUB_WORKOS_USER_ID = os.getenv(
+    "TEST_GITHUB_WORKOS_USER_ID", "user_github_placeholder"
+)
+TEST_UNVERIFIED_WORKOS_USER_ID = os.getenv(
+    "TEST_UNVERIFIED_WORKOS_USER_ID", "user_unverified_placeholder"
+)
+TEST_GITHUB_TOKEN = os.getenv("TEST_GITHUB_TOKEN", "ghp_placeholder_for_testing")
+TEST_SESSION_TOKEN = os.getenv("TEST_SESSION_TOKEN", "session_placeholder_for_testing")
 
 
 # Test database URL - use unique shared in-memory SQLite per test function
@@ -86,12 +97,28 @@ def test_client(test_engine, test_db_session):
 
 @pytest_asyncio.fixture
 async def test_user(test_db_session: AsyncSession) -> User:
-    """Create a test user"""
+    """Create a test user with WorkOS-style auth"""
     user = User(
         email="test@example.com",
-        password_hash=hash_password("TestPassword123!"),
+        workos_user_id=TEST_WORKOS_USER_ID,
         email_verified=True,
         is_active=True,
+    )
+    test_db_session.add(user)
+    await test_db_session.commit()
+    await test_db_session.refresh(user)
+    return user
+
+
+@pytest_asyncio.fixture
+async def test_user_with_github(test_db_session: AsyncSession) -> User:
+    """Create a test user with GitHub token"""
+    user = User(
+        email="github@example.com",
+        workos_user_id=TEST_GITHUB_WORKOS_USER_ID,
+        email_verified=True,
+        is_active=True,
+        github_access_token=TEST_GITHUB_TOKEN,
     )
     test_db_session.add(user)
     await test_db_session.commit()
@@ -104,7 +131,7 @@ async def test_user_unverified(test_db_session: AsyncSession) -> User:
     """Create an unverified test user"""
     user = User(
         email="unverified@example.com",
-        password_hash=hash_password("TestPassword123!"),
+        workos_user_id=TEST_UNVERIFIED_WORKOS_USER_ID,
         email_verified=False,
         is_active=True,
     )
@@ -115,44 +142,29 @@ async def test_user_unverified(test_db_session: AsyncSession) -> User:
 
 
 @pytest.fixture
-def auth_headers(test_client, test_user):
-    """Get authentication headers for test user"""
-    response = test_client.post(
-        "/api/auth/login",
-        json={"email": "test@example.com", "password": "TestPassword123!"},
-    )
-    assert response.status_code == 200
-    tokens = response.json()
-    return {"Authorization": f"Bearer {tokens['access_token']}"}
+def auth_cookie(test_user):
+    """Get a mock session cookie value for the test user.
+
+    In tests, we mock verify_session to accept this token.
+    """
+    return TEST_SESSION_TOKEN
 
 
 @pytest.fixture
-def test_password():
-    """Test password that meets all requirements"""
-    return "TestPassword123!"
+def auth_headers(test_user, _mock_verify_session):
+    """Provide auth via cookie header for tests that use auth_headers pattern.
+
+    The middleware now reads from cookies, so we pass the cookie header.
+    The _mock_verify_session fixture patches verify_session globally.
+    """
+    return {"cookie": f"dependiq_session={TEST_SESSION_TOKEN}"}
 
 
 @pytest.fixture
-def weak_password():
-    """Weak password for testing validation"""
-    return "weak"
+def _mock_verify_session(test_user):
+    """Patch verify_session to return the test user's WorkOS ID."""
+    from unittest.mock import patch
 
-
-@pytest.fixture
-def valid_user_data():
-    """Valid user registration data"""
-    return {
-        "email": "newuser@example.com",
-        "password": "ValidPass123!",
-        "confirm_password": "ValidPass123!",
-    }
-
-
-@pytest.fixture
-def invalid_user_data():
-    """Invalid user registration data (mismatched passwords)"""
-    return {
-        "email": "newuser@example.com",
-        "password": "ValidPass123!",
-        "confirm_password": "DifferentPass123!",
-    }
+    with patch("app.services.workos_auth.verify_session") as mock_v:
+        mock_v.return_value = {"sub": TEST_WORKOS_USER_ID}
+        yield mock_v

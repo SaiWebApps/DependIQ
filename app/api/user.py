@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
 from ..middleware import get_current_user
-from ..models import OAuthConnection, ProjectHistory, User, UserPreference
+from ..models import ProjectHistory, User, UserPreference
 
 router = APIRouter(prefix="/user", tags=["user"])
 
@@ -114,11 +114,18 @@ async def get_user_profile(
     """
     Get complete user profile including OAuth connections and preferences
     """
-    # Get OAuth connections
-    oauth_result = await db.execute(
-        select(OAuthConnection).where(OAuthConnection.user_id == current_user.id)
-    )
-    oauth_connections = oauth_result.scalars().all()
+    # Build OAuth connections from user token columns
+    oauth_connections = []
+    if current_user.github_access_token:
+        oauth_connections.append(
+            OAuthConnectionResponse(
+                id="github",
+                provider="github",
+                provider_email=current_user.email,
+                connected_at=current_user.created_at.isoformat(),
+                updated_at=current_user.updated_at.isoformat(),
+            )
+        )
 
     # Get preferences
     prefs_result = await db.execute(
@@ -150,16 +157,7 @@ async def get_user_profile(
             if current_user.last_login_at
             else None
         ),
-        oauth_connections=[
-            OAuthConnectionResponse(
-                id=str(conn.id),
-                provider=conn.provider,
-                provider_email=conn.provider_email,
-                connected_at=conn.created_at.isoformat(),
-                updated_at=conn.updated_at.isoformat(),
-            )
-            for conn in oauth_connections
-        ],
+        oauth_connections=oauth_connections,
         preferences=UserPreferencesResponse(
             theme=preferences.theme,
             language=preferences.language,
@@ -467,23 +465,41 @@ async def get_oauth_connections(
     current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """
-    Get all OAuth connections for the current user
+    Get all OAuth connections for the current user.
+    Derived from token columns on the User model.
     """
-    result = await db.execute(
-        select(OAuthConnection).where(OAuthConnection.user_id == current_user.id)
-    )
-    connections = result.scalars().all()
-
-    return [
-        OAuthConnectionResponse(
-            id=str(conn.id),
-            provider=conn.provider,
-            provider_email=conn.provider_email,
-            connected_at=conn.created_at.isoformat(),
-            updated_at=conn.updated_at.isoformat(),
+    connections = []
+    if current_user.github_access_token:
+        connections.append(
+            OAuthConnectionResponse(
+                id="github",
+                provider="github",
+                provider_email=current_user.email,
+                connected_at=current_user.created_at.isoformat(),
+                updated_at=current_user.updated_at.isoformat(),
+            )
         )
-        for conn in connections
-    ]
+    if current_user.gitlab_access_token:
+        connections.append(
+            OAuthConnectionResponse(
+                id="gitlab",
+                provider="gitlab",
+                provider_email=current_user.email,
+                connected_at=current_user.created_at.isoformat(),
+                updated_at=current_user.updated_at.isoformat(),
+            )
+        )
+    if current_user.bitbucket_access_token:
+        connections.append(
+            OAuthConnectionResponse(
+                id="bitbucket",
+                provider="bitbucket",
+                provider_email=current_user.email,
+                connected_at=current_user.created_at.isoformat(),
+                updated_at=current_user.updated_at.isoformat(),
+            )
+        )
+    return connections
 
 
 @router.delete("/oauth-connections/{provider}", response_model=MessageResponse)
@@ -493,45 +509,18 @@ async def unlink_oauth_connection(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Unlink an OAuth connection from the user's account
+    Unlink an OAuth connection from the user's account.
 
-    - **provider**: OAuth provider name (e.g., 'github', 'google', 'microsoft')
-
-    Note: Users must have a password set to unlink OAuth if it's their only login method
+    - **provider**: OAuth provider name ('github', 'gitlab', 'bitbucket')
     """
-    # Check if connection exists
-    result = await db.execute(
-        select(OAuthConnection).where(
-            OAuthConnection.user_id == current_user.id,
-            OAuthConnection.provider == provider,
-        )
-    )
-    connection = result.scalar_one_or_none()
-
-    if not connection:
+    token_attr = f"{provider}_access_token"
+    if not hasattr(current_user, token_attr) or not getattr(current_user, token_attr):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"No {provider} connection found",
         )
 
-    # Check if user has a password (safety check)
-    if not current_user.password_hash:
-        # Count other OAuth connections
-        count_result = await db.execute(
-            select(func.count())
-            .select_from(OAuthConnection)
-            .where(OAuthConnection.user_id == current_user.id)
-        )
-        oauth_count = count_result.scalar()
-
-        if oauth_count <= 1:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot unlink last login method. Please set a password first.",
-            )
-
-    # Delete the connection
-    await db.delete(connection)
+    setattr(current_user, token_attr, None)
     await db.commit()
 
     return MessageResponse(

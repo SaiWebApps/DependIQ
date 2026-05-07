@@ -14,7 +14,7 @@ annotated-types==0.7.0
     # via pydantic
 anyio==4.13.0
     # via
-    #   httpcore
+    #   httpx
     #   openai
     #   starlette
     #   watchfiles
@@ -49,11 +49,12 @@ colorama==0.4.6 ; sys_platform == 'win32'
     #   click
     #   tqdm
     #   uvicorn
-cryptography==48.0.0
+cryptography==46.0.7
     # via
     #   authlib
     #   joserfc
     #   python-jose
+    #   workos
 distro==1.9.0
     # via openai
 dnspython==2.8.0
@@ -85,23 +86,24 @@ greenlet==3.5.0
     #   sqlalchemy
 gunicorn==26.0.0
     # via dependiq
-h11==0.14.0
+h11==0.16.0
     # via
     #   httpcore
     #   uvicorn
 hf-xet==1.4.3 ; platform_machine == 'AMD64' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'arm64' or platform_machine == 'x86_64'
     # via huggingface-hub
-httpcore==0.17.3
+httpcore==1.0.9
     # via httpx
 httptools==0.7.1
     # via uvicorn
-httpx==0.24.1
+httpx==0.28.1
     # via
     #   dependiq
     #   fastapi
     #   huggingface-hub
     #   litellm
     #   openai
+    #   workos
 huggingface-hub==1.13.0
     # via tokenizers
 idna==3.13
@@ -173,7 +175,9 @@ pydantic-core==2.46.3
 pygments==2.20.0
     # via rich
 pyjwt==2.12.1
-    # via dependiq
+    # via
+    #   dependiq
+    #   workos
 python-dotenv==1.2.2
     # via
     #   dependiq
@@ -216,10 +220,7 @@ shellingham==1.5.4
 six==1.17.0
     # via ecdsa
 sniffio==1.3.1
-    # via
-    #   httpcore
-    #   httpx
-    #   openai
+    # via openai
 sqlalchemy==2.0.49
     # via
     #   alembic
@@ -269,6 +270,8 @@ watchfiles==1.1.1
     # via uvicorn
 websockets==16.0
     # via uvicorn
+workos==7.0.0
+    # via dependiq
 yarl==1.23.0
     # via aiohttp
 zipp==3.23.1

@@ -48,32 +48,8 @@ async def home(request: Request, db: AsyncSession = Depends(get_db)):
 
 @app.get("/login")
 def login_page(request: Request):
-    """Login page"""
-    return templates.TemplateResponse("login.html", {"request": request})
-
-
-@app.get("/register")
-def register_page(request: Request):
-    """Registration page"""
-    return templates.TemplateResponse("register.html", {"request": request})
-
-
-@app.get("/magic-link-register")
-def magic_link_register_page(request: Request):
-    """Registration link page"""
-    return templates.TemplateResponse("magic_link_register.html", {"request": request})
-
-
-@app.get("/forgot-password")
-def forgot_password_page(request: Request):
-    """Forgot password page"""
-    return templates.TemplateResponse("forgot_password.html", {"request": request})
-
-
-@app.get("/reset-password")
-def reset_password_page(request: Request):
-    """Reset password page"""
-    return templates.TemplateResponse("reset_password.html", {"request": request})
+    """Login page — redirects to WorkOS AuthKit"""
+    return templates.TemplateResponse("sign_in.html", {"request": request})
 
 
 @app.get("/profile")

@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..config import Config
 from ..database import get_db
 from ..middleware import get_current_user
-from ..models import Job, JobStatus, JobType, OAuthConnection, ProjectLibrary, User
+from ..models import Job, JobStatus, JobType, ProjectLibrary, User
 from ..services.github_oauth_service import get_github_repositories
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -199,26 +199,17 @@ async def get_github_repos(
     current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """
-    Get GitHub repositories for the current user
-    Requires GitHub OAuth connection
+    Get GitHub repositories for the current user.
+    Requires GitHub OAuth token stored on user.
     """
-    # Check if user has GitHub connection
-    result = await db.execute(
-        select(OAuthConnection).where(
-            OAuthConnection.user_id == current_user.id,
-            OAuthConnection.provider == "github",
-        )
-    )
-    connection = result.scalar_one_or_none()
-
-    if not connection:
+    if not current_user.github_access_token:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="GitHub account not connected. Please connect your GitHub account first.",
         )
 
-    # Get repositories
-    repos = await get_github_repositories(connection.access_token)
+    # Get repositories using stored token
+    repos = await get_github_repositories(current_user.github_access_token)
 
     if repos is None:
         raise HTTPException(
@@ -239,16 +230,8 @@ async def import_github_repo(
     """
     Import a GitHub repository as a project
     """
-    # Check if user has GitHub connection
-    result = await db.execute(
-        select(OAuthConnection).where(
-            OAuthConnection.user_id == current_user.id,
-            OAuthConnection.provider == "github",
-        )
-    )
-    connection = result.scalar_one_or_none()
-
-    if not connection:
+    # Check if user has GitHub token
+    if not current_user.github_access_token:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="GitHub account not connected",

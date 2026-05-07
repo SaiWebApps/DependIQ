@@ -2,20 +2,14 @@
 Unit tests for database models
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import pytest
 from sqlalchemy import select
 
-from app.models.email_verification_token import EmailVerificationToken
-from app.models.magic_link_token import MagicLinkToken
-from app.models.oauth_connection import OAuthConnection
-from app.models.password_reset_token import PasswordResetToken
 from app.models.project_history import ProjectHistory
 from app.models.user import User
 from app.models.user_preference import UserPreference
-from app.models.user_session import UserSession
-from app.utils.password_utils import hash_password
 
 
 class TestUserModel:
@@ -26,7 +20,7 @@ class TestUserModel:
         """Test creating a user"""
         user = User(
             email="model_test@example.com",
-            password_hash=hash_password("TestPassword123!"),
+            workos_user_id="workos_model_test",
             email_verified=False,
             is_active=True,
         )
@@ -45,13 +39,12 @@ class TestUserModel:
         """Test that user email must be unique"""
         duplicate_user = User(
             email=test_user.email,
-            password_hash=hash_password("Different123!"),
+            workos_user_id="workos_dup",
             email_verified=False,
         )
 
         test_db_session.add(duplicate_user)
 
-        # Use specific exception instead of generic Exception
         from sqlalchemy.exc import IntegrityError
 
         with pytest.raises(IntegrityError):
@@ -62,7 +55,7 @@ class TestUserModel:
         """Test user timestamp fields"""
         user = User(
             email="timestamps@example.com",
-            password_hash=hash_password("TestPassword123!"),
+            workos_user_id="workos_ts",
         )
 
         test_db_session.add(user)
@@ -73,6 +66,25 @@ class TestUserModel:
         assert user.updated_at is not None
         assert isinstance(user.created_at, datetime)
         assert isinstance(user.updated_at, datetime)
+
+    @pytest.mark.asyncio
+    async def test_user_provider_columns(self, test_db_session):
+        """Test user provider OAuth columns"""
+        user = User(
+            email="providers@example.com",
+            workos_user_id="workos_prov",
+            email_verified=True,
+            is_active=True,
+        )
+
+        test_db_session.add(user)
+        await test_db_session.commit()
+        await test_db_session.refresh(user)
+
+        # Columns exist and default to None
+        assert user.github_access_token is None
+        assert user.gitlab_access_token is None
+        assert user.bitbucket_access_token is None
 
 
 class TestUserPreferenceModel:
@@ -183,185 +195,6 @@ class TestProjectHistoryModel:
         assert project.metadata["file_count"] == 50
 
 
-class TestOAuthConnectionModel:
-    """Test OAuthConnection model"""
-
-    @pytest.mark.asyncio
-    async def test_create_oauth_connection(self, test_db_session, test_user):
-        """Test creating OAuth connection"""
-        connection = OAuthConnection(
-            user_id=test_user.id,
-            provider="github",
-            provider_user_id="12345",
-            provider_email="github@example.com",
-            access_token="gho_test_token",
-            scopes="read:user repo",
-        )
-
-        test_db_session.add(connection)
-        await test_db_session.commit()
-        await test_db_session.refresh(connection)
-
-        assert connection.id is not None
-        assert connection.provider == "github"
-        assert connection.provider_user_id == "12345"
-
-    @pytest.mark.asyncio
-    async def test_oauth_connection_provider_data(self, test_db_session, test_user):
-        """Test OAuth provider data storage"""
-        provider_data = {
-            "id": 12345,
-            "login": "testuser",
-            "avatar_url": "https://example.com/avatar.jpg",
-        }
-
-        connection = OAuthConnection(
-            user_id=test_user.id,
-            provider="github",
-            provider_user_id="12345",
-            access_token="token",
-            provider_data=provider_data,
-        )
-
-        test_db_session.add(connection)
-        await test_db_session.commit()
-        await test_db_session.refresh(connection)
-
-        assert connection.provider_data is not None
-        assert connection.provider_data["login"] == "testuser"
-
-
-class TestUserSessionModel:
-    """Test UserSession model"""
-
-    @pytest.mark.asyncio
-    async def test_create_user_session(self, test_db_session, test_user):
-        """Test creating user session"""
-        expires_at = datetime.utcnow() + timedelta(hours=8)
-
-        session = UserSession(
-            user_id=test_user.id,
-            session_token="test_session_token",
-            expires_at=expires_at,
-        )
-
-        test_db_session.add(session)
-        await test_db_session.commit()
-        await test_db_session.refresh(session)
-
-        assert session.id is not None
-        assert session.session_token == "test_session_token"
-        assert session.expires_at is not None
-
-    @pytest.mark.asyncio
-    async def test_session_expiration_check(self, test_db_session, test_user):
-        """Test checking if session is expired"""
-        # Create expired session
-        expired_session = UserSession(
-            user_id=test_user.id,
-            session_token="expired_token",
-            expires_at=datetime.utcnow() - timedelta(hours=1),
-        )
-
-        # Create valid session
-        valid_session = UserSession(
-            user_id=test_user.id,
-            session_token="valid_token",
-            expires_at=datetime.utcnow() + timedelta(hours=1),
-        )
-
-        test_db_session.add(expired_session)
-        test_db_session.add(valid_session)
-        await test_db_session.commit()
-
-        # Query for non-expired sessions
-        result = await test_db_session.execute(
-            select(UserSession).where(
-                UserSession.user_id == test_user.id,
-                UserSession.expires_at > datetime.utcnow(),
-            )
-        )
-        sessions = result.scalars().all()
-
-        assert len(sessions) == 1
-        assert sessions[0].session_token == "valid_token"
-
-
-class TestTokenModels:
-    """Test various token models"""
-
-    @pytest.mark.asyncio
-    async def test_create_email_verification_token(self, test_db_session, test_user):
-        """Test creating email verification token"""
-        token = EmailVerificationToken(
-            user_id=test_user.id,
-            token="verify_token_123",
-            expires_at=datetime.utcnow() + timedelta(hours=24),
-        )
-
-        test_db_session.add(token)
-        await test_db_session.commit()
-        await test_db_session.refresh(token)
-
-        assert token.id is not None
-        assert token.token == "verify_token_123"
-        assert not token.is_used()
-
-    @pytest.mark.asyncio
-    async def test_create_password_reset_token(self, test_db_session, test_user):
-        """Test creating password reset token"""
-        token = PasswordResetToken(
-            user_id=test_user.id,
-            token="reset_token_456",
-            expires_at=datetime.utcnow() + timedelta(hours=1),
-        )
-
-        test_db_session.add(token)
-        await test_db_session.commit()
-        await test_db_session.refresh(token)
-
-        assert token.id is not None
-        assert token.token == "reset_token_456"
-
-    @pytest.mark.asyncio
-    async def test_create_magic_link_token(self, test_db_session, test_user):
-        """Test creating magic link token"""
-        token = MagicLinkToken(
-            email=test_user.email,
-            token="magic_token_789",
-            temp_password="TempPass123!",
-            expires_at=datetime.utcnow() + timedelta(minutes=15),
-        )
-
-        test_db_session.add(token)
-        await test_db_session.commit()
-        await test_db_session.refresh(token)
-
-        assert token.id is not None
-        assert token.token == "magic_token_789"
-
-    @pytest.mark.asyncio
-    async def test_token_expiration_and_usage(self, test_db_session, test_user):
-        """Test token expiration and usage tracking"""
-        token = EmailVerificationToken(
-            user_id=test_user.id,
-            token="usage_test_token",
-            expires_at=datetime.utcnow() + timedelta(hours=1),
-        )
-
-        test_db_session.add(token)
-        await test_db_session.commit()
-
-        # Mark as used
-        token.used_at = datetime.utcnow()
-
-        await test_db_session.commit()
-        await test_db_session.refresh(token)
-
-        assert token.is_used() is True
-        assert token.used_at is not None
-
-
 class TestModelRelationships:
     """Test model relationships"""
 
@@ -406,28 +239,3 @@ class TestModelRelationships:
         projects = result.scalars().all()
 
         assert len(projects) == 3
-
-    @pytest.mark.asyncio
-    async def test_user_oauth_connections_relationship(
-        self, test_db_session, test_user
-    ):
-        """Test user to OAuth connections relationship"""
-        # Create OAuth connection
-        connection = OAuthConnection(
-            user_id=test_user.id,
-            provider="github",
-            provider_user_id="54321",
-            access_token="token",
-        )
-
-        test_db_session.add(connection)
-        await test_db_session.commit()
-
-        # Query connections
-        result = await test_db_session.execute(
-            select(OAuthConnection).where(OAuthConnection.user_id == test_user.id)
-        )
-        connections = result.scalars().all()
-
-        assert len(connections) >= 1
-        assert connections[0].provider == "github"
