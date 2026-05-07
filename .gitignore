@@ -162,3 +162,4 @@ test_screenshots/
 *.webp
 chromedriver.log
 geckodriver.log
+.mcp.json

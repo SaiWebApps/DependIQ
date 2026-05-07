@@ -1,4 +1,4 @@
-.PHONY: help sync format lint typecheck test test-unit test-integration test-functional test-llm test-llm-integration test-coverage test-quick clean run dev setup db-setup db-create db-migrate db-reset db-status db-start db-stop
+.PHONY: help sync format lint typecheck test test-unit test-integration test-functional test-llm test-llm-integration test-coverage test-quick clean run dev setup db-setup db-create db-migrate db-reset db-status db-start db-stop render
 
 # uv is the only package manager. No pip, no venv activation.
 UV := uv
@@ -192,3 +192,10 @@ db-status:
 	@echo ""
 	@echo "Migration:"
 	@$(UV) run alembic current 2>/dev/null || echo "  No migrations applied"
+
+# Render CLI — clears NO_PROXY so Go httpproxy routes through corporate proxy.
+# Examples: make render ARGS="services list"
+#           make render ARGS="deploys list --service srv-d7u2itjbc2fs73f1tb40"
+ARGS ?=
+render:
+	@NO_PROXY= no_proxy= /opt/homebrew/bin/render $(ARGS)
