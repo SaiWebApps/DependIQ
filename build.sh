@@ -6,6 +6,6 @@ set -o errexit  # Exit on error
 echo "Starting DependIQ build process..."
 
 pip install --upgrade pip
-pip install .
+pip install -r requirements.txt
 
 echo "Build completed successfully!"
