@@ -7,6 +7,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..config import Config
 from ..database import get_db
 from ..middleware import get_current_user
 from ..models import User
@@ -502,6 +503,7 @@ async def github_oauth_callback(
         value=jwt_token,
         max_age=900,
         httponly=False,
+        secure=Config.SECURE_COOKIES,
         samesite="lax",
         path="/",
     )

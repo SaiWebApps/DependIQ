@@ -2,7 +2,7 @@
 JWT token service for authentication
 """
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import jwt
 from jwt.exceptions import InvalidTokenError
@@ -21,7 +21,7 @@ def create_access_token(user_id: str, email: str) -> str:
     Returns:
         JWT access token string
     """
-    expire = datetime.utcnow() + timedelta(
+    expire = datetime.now(UTC) + timedelta(
         minutes=Config.JWT_ACCESS_TOKEN_EXPIRE_MINUTES
     )
 
@@ -29,7 +29,7 @@ def create_access_token(user_id: str, email: str) -> str:
         "sub": user_id,
         "email": email,
         "exp": expire,
-        "iat": datetime.utcnow(),
+        "iat": datetime.now(UTC),
         "type": "access",
     }
 
@@ -48,12 +48,12 @@ def create_refresh_token(user_id: str) -> str:
     Returns:
         JWT refresh token string
     """
-    expire = datetime.utcnow() + timedelta(days=Config.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
+    expire = datetime.now(UTC) + timedelta(days=Config.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
 
     payload = {
         "sub": user_id,
         "exp": expire,
-        "iat": datetime.utcnow(),
+        "iat": datetime.now(UTC),
         "type": "refresh",
     }
 

@@ -5,7 +5,7 @@ Authentication service for user registration, login, and token management
 import os
 import secrets
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -154,7 +154,7 @@ class AuthService:
             return None, "Account is disabled. Please contact support."
 
         # Update last login time
-        user.last_login_at = datetime.utcnow()
+        user.last_login_at = datetime.now(UTC)
         await self.db.commit()
 
         # Generate tokens
@@ -241,7 +241,7 @@ class AuthService:
 
         # Mark email as verified
         user.email_verified = True
-        verification.used_at = datetime.utcnow()
+        verification.used_at = datetime.now(UTC)
 
         await self.db.commit()
 
@@ -334,7 +334,7 @@ class AuthService:
 
         # Update password
         user.password_hash = hash_password(new_password)
-        reset.used_at = datetime.utcnow()
+        reset.used_at = datetime.now(UTC)
 
         await self.db.commit()
 
@@ -397,7 +397,7 @@ class AuthService:
     def _create_verification_token(self, user_id: uuid.UUID) -> EmailVerificationToken:
         """Create email verification token"""
         token = secrets.token_urlsafe(32)
-        expires_at = datetime.utcnow() + timedelta(hours=24)
+        expires_at = datetime.now(UTC) + timedelta(hours=24)
 
         return EmailVerificationToken(
             user_id=user_id, token=token, expires_at=expires_at
@@ -406,7 +406,7 @@ class AuthService:
     def _create_reset_token(self, user_id: uuid.UUID) -> PasswordResetToken:
         """Create password reset token"""
         token = secrets.token_urlsafe(32)
-        expires_at = datetime.utcnow() + timedelta(hours=1)
+        expires_at = datetime.now(UTC) + timedelta(hours=1)
 
         return PasswordResetToken(user_id=user_id, token=token, expires_at=expires_at)
 
@@ -453,13 +453,8 @@ class AuthService:
         if existing_user:
             return None, "An account with this email already exists"
 
-        # Generate temp password (simple for now, can be more complex)
-        import random
-        import string
-
-        temp_password = "".join(
-            random.choices(string.ascii_letters + string.digits, k=12)
-        )
+        # Generate temp password using cryptographically secure randomness
+        temp_password = secrets.token_urlsafe(16)
 
         # Create registration link token
         magic_token = self._create_magic_link_token(email, temp_password)
@@ -558,7 +553,7 @@ class AuthService:
             self.db.add(preferences)
 
             # Mark registration link as used
-            magic_link.used_at = datetime.utcnow()
+            magic_link.used_at = datetime.now(UTC)
 
             await self.db.commit()
             await self.db.refresh(user)
@@ -577,7 +572,7 @@ class AuthService:
     ) -> MagicLinkToken:
         """Create registration link token for new user registration"""
         token = secrets.token_urlsafe(32)
-        expires_at = datetime.utcnow() + timedelta(hours=24)
+        expires_at = datetime.now(UTC) + timedelta(hours=24)
 
         return MagicLinkToken(
             email=email, token=token, temp_password=temp_password, expires_at=expires_at
