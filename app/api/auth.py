@@ -503,6 +503,7 @@ async def github_oauth_callback(
         max_age=900,
         httponly=False,
         samesite="lax",
+        path="/",
     )
     # Clear the oauth_state cookie
     response.delete_cookie("oauth_state")
