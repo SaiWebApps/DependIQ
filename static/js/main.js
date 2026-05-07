@@ -41,30 +41,30 @@ document.addEventListener('DOMContentLoaded', function () {
     fileInput.addEventListener('change', function (e) {
       if (e.target.files.length > 0) {
         display.innerHTML = `
-                    <span class="material-icons" style="font-size: 3rem; color: #4caf50; margin-bottom: 16px;">check_circle</span>
-                    <div style="font-size: 1.1rem; color: #4caf50; font-weight: 500;">${e.target.files[0].name}</div>
-                    <div style="color: #666; margin-top: 8px;">Ready to analyze</div>
+                    <span class="material-icons" style="font-size: 3rem; color: var(--color-success); margin-bottom: 16px;">check_circle</span>
+                    <div style="font-size: 1.1rem; color: var(--color-success); font-weight: 500;">${e.target.files[0].name}</div>
+                    <div style="color: var(--color-secondary); margin-top: 8px;">Ready to analyze</div>
                 `;
-        display.style.background = '#f1f8e9';
-        display.style.borderColor = '#4caf50';
+        display.classList.remove('drag-active');
+        display.classList.add('drag-success');
       }
     });
 
     // Handle drag and drop
     display.addEventListener('dragover', function (e) {
       e.preventDefault();
-      display.style.background = '#e8f2ff';
-      display.style.borderColor = '#1565c0';
+      display.classList.remove('drag-success');
+      display.classList.add('drag-active');
     });
 
     display.addEventListener('dragleave', function (e) {
       e.preventDefault();
-      display.style.background = '#f3f7ff';
-      display.style.borderColor = '#1976d2';
+      display.classList.remove('drag-active');
     });
 
     display.addEventListener('drop', function (e) {
       e.preventDefault();
+      display.classList.remove('drag-active');
       const files = e.dataTransfer.files;
       if (files.length > 0) {
         fileInput.files = files;

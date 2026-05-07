@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>{% block title %}DependIQ{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+  <link rel="manifest" href="/images/site.webmanifest">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="/static/js/theme.js?v=2"></script>
+  <link rel="stylesheet" href="/static/css/main.css">
+  {% block head %}{% endblock %}
+</head>
+
+<body>
+  <div class="app-layout">
+    <!-- Side Navigation -->
+    <nav class="sidebar" id="sidebar">
+      <button class="sidebar-toggle" onclick="toggleSidebar()">
+        <span class="material-icons">chevron_left</span>
+      </button>
+      <div class="sidebar-header">
+        <h1 class="sidebar-logo">
+          <img src="/images/DependIQ.png" alt="DependIQ Logo"
+            style="height: 32px; width: auto; margin-right: 8px; vertical-align: middle;">
+          <span>DependIQ</span>
+        </h1>
+      </div>
+      <div class="sidebar-nav">
+        {% block sidebar_nav %}
+        <a href="/profile" class="nav-item{% if active_page == 'profile' %} active{% endif %}">
+          <span class="material-icons">person</span>
+          <span>Profile</span>
+        </a>
+        <a href="/projects" class="nav-item{% if active_page == 'projects' %} active{% endif %}">
+          <span class="material-icons">folder</span>
+          <span>Projects</span>
+        </a>
+        <a href="/jobs" class="nav-item{% if active_page == 'jobs' %} active{% endif %}">
+          <span class="material-icons">history</span>
+          <span>Job History</span>
+        </a>
+        {% endblock %}
+      </div>
+      <div class="sidebar-footer">
+        <button class="logout-btn" onclick="logout()">
+          <span class="material-icons">logout</span>
+          <span>Logout</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+
+  <script src="/static/js/main.js"></script>
+  <script>
+    function logout() {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      document.cookie = 'access_token=; path=/; max-age=0';
+      window.location.href = '/login';
+    }
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      sidebar.classList.toggle('collapsed');
+      localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+    }
+
+    // Restore sidebar state on page load
+    if (localStorage.getItem('sidebarCollapsed') === 'true') {
+      document.getElementById('sidebar').classList.add('collapsed');
+    }
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+
+</html>

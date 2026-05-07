@@ -1,19 +1,9 @@
-<!DOCTYPE html>
-<html>
+{% extends "base.html" %}
 
-<head>
-  <title>DependIQ - AI-Powered Dependency Updater</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
-  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
-  <link rel="manifest" href="/images/site.webmanifest">
-  <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+{% block title %}DependIQ - AI-Powered Dependency Updater{% endblock %}
+
+{% block head %}
   <link href="https://unpkg.com/@material/web@1.0.1/all.css" rel="stylesheet">
-  <script src="/static/js/theme.js?v=2"></script>
-  <link rel="stylesheet" href="/static/css/main.css">
   <script type="importmap">
     {
         "imports": {
@@ -24,42 +14,20 @@
   <script type="module">
     import '@material/web/all.js';
   </script>
-</head>
+{% endblock %}
 
-<body>
-  <div class="app-layout">
-    <!-- Side Navigation -->
-    <nav class="sidebar" id="sidebar">
-      <button class="sidebar-toggle" onclick="toggleSidebar()">
-        <span class="material-icons">chevron_left</span>
-      </button>
-      <div class="sidebar-header">
-        <h1 class="sidebar-logo">
-          <img src="/images/DependIQ.png" alt="DependIQ Logo"
-            style="height: 32px; width: auto; margin-right: 8px; vertical-align: middle;">
-          <span>DependIQ</span>
-        </h1>
-      </div>
-      <div class="sidebar-nav">
-        <a href="/profile" class="nav-item">
-          <span class="material-icons">person</span>
-          <span>Profile</span>
-        </a>
-        <a href="/" class="nav-item active">
-          <span class="material-icons">cloud_upload</span>
-          <span>Analyze</span>
-        </a>
-      </div>
-      <div class="sidebar-footer">
-        <button class="logout-btn" onclick="logout()">
-          <span class="material-icons">logout</span>
-          <span>Logout</span>
-        </button>
-      </div>
-    </nav>
+{% block sidebar_nav %}
+  <a href="/profile" class="nav-item">
+    <span class="material-icons">person</span>
+    <span>Profile</span>
+  </a>
+  <a href="/" class="nav-item active">
+    <span class="material-icons">cloud_upload</span>
+    <span>Analyze</span>
+  </a>
+{% endblock %}
 
-    <!-- Main Content -->
-    <div class="main-content">
+{% block content %}
       <div class="container" style="margin: 0 auto;">
         <div class="hero-section">
           <h1 class="hero-title">
@@ -174,28 +142,4 @@
           </div>
         </div>
       </div>
-    </div>
-
-    <script src="/static/js/main.js"></script>
-    <script>
-      function logout() {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        document.cookie = 'access_token=; path=/; max-age=0';
-        window.location.href = '/login';
-      }
-
-      function toggleSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        sidebar.classList.toggle('collapsed');
-        localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
-      }
-
-      // Restore sidebar state on page load
-      if (localStorage.getItem('sidebarCollapsed') === 'true') {
-        document.getElementById('sidebar').classList.add('collapsed');
-      }
-    </script>
-</body>
-
-</html>
+{% endblock %}

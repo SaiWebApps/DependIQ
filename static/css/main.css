@@ -364,6 +364,17 @@ body {
   border-color: var(--color-primary);
 }
 
+/* Drag-and-drop states */
+.file-input-display.drag-active {
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  border-color: var(--color-accent);
+}
+
+.file-input-display.drag-success {
+  background: color-mix(in srgb, var(--color-success) 10%, var(--color-surface));
+  border-color: var(--color-success);
+}
+
 /* Tables */
 .dependencies-table {
   background: var(--color-surface);

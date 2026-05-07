@@ -1,18 +1,8 @@
-<!DOCTYPE html>
-<html>
+{% extends "base.html" %}
 
-<head>
-    <title>Job History - DependIQ</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
-    <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
-    <link rel="manifest" href="/images/site.webmanifest">
-    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <script src="/static/js/theme.js?v=2"></script>
-    <link rel="stylesheet" href="/static/css/main.css">
+{% block title %}Job History - DependIQ{% endblock %}
+
+{% block head %}
     <style>
         .jobs-container {
             padding: 30px;
@@ -28,7 +18,7 @@
         }
 
         .jobs-header h1 {
-            color: #333;
+            color: var(--color-primary);
             font-size: 2rem;
             margin: 0;
         }
@@ -37,7 +27,7 @@
             display: flex;
             gap: 10px;
             margin-bottom: 20px;
-            border-bottom: 2px solid #e0e0e0;
+            border-bottom: 2px solid var(--color-border);
         }
 
         .filter-tab {
@@ -47,17 +37,17 @@
             border-bottom: 3px solid transparent;
             cursor: pointer;
             font-weight: 500;
-            color: #666;
+            color: var(--color-secondary);
             transition: all 0.3s ease;
         }
 
         .filter-tab:hover {
-            color: #1976d2;
+            color: var(--color-accent);
         }
 
         .filter-tab.active {
-            color: #1976d2;
-            border-bottom-color: #1976d2;
+            color: var(--color-accent);
+            border-bottom-color: var(--color-accent);
         }
 
         .stats-grid {
@@ -68,10 +58,11 @@
         }
 
         .stat-card {
-            background: white;
+            background: var(--color-surface);
             padding: 20px;
             border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--color-border);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
 
         .stat-card .stat-value {
@@ -81,36 +72,37 @@
         }
 
         .stat-card .stat-label {
-            color: #666;
+            color: var(--color-secondary);
             font-size: 0.9rem;
         }
 
         .stat-card.queued .stat-value {
-            color: #ff9800;
+            color: var(--color-warning);
         }
 
         .stat-card.running .stat-value {
-            color: #2196f3;
+            color: var(--color-info);
         }
 
         .stat-card.completed .stat-value {
-            color: #4caf50;
+            color: var(--color-success);
         }
 
         .stat-card.failed .stat-value {
-            color: #f44336;
+            color: var(--color-error);
         }
 
         .jobs-list {
-            background: white;
+            background: var(--color-surface);
             border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--color-border);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
             overflow: hidden;
         }
 
         .job-item {
             padding: 20px;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 1px solid var(--color-border);
             transition: background 0.3s ease;
             cursor: pointer;
         }
@@ -120,7 +112,7 @@
         }
 
         .job-item:hover {
-            background: #f5f5f5;
+            background: var(--color-hover);
         }
 
         .job-header {
@@ -137,13 +129,13 @@
         .job-name {
             font-size: 1.1rem;
             font-weight: 500;
-            color: #333;
+            color: var(--color-primary);
             margin-bottom: 4px;
         }
 
         .job-project {
             font-size: 0.9rem;
-            color: #666;
+            color: var(--color-secondary);
             display: flex;
             align-items: center;
             gap: 4px;
@@ -160,28 +152,28 @@
         }
 
         .job-status-badge.queued {
-            background: #fff3e0;
-            color: #ef6c00;
+            background: color-mix(in srgb, var(--color-warning) 15%, transparent);
+            color: var(--color-warning);
         }
 
         .job-status-badge.running {
-            background: #e3f2fd;
-            color: #1976d2;
+            background: color-mix(in srgb, var(--color-info) 15%, transparent);
+            color: var(--color-accent);
         }
 
         .job-status-badge.completed {
-            background: #e8f5e9;
-            color: #2e7d32;
+            background: color-mix(in srgb, var(--color-success) 15%, transparent);
+            color: var(--color-success);
         }
 
         .job-status-badge.failed {
-            background: #ffebee;
-            color: #c62828;
+            background: color-mix(in srgb, var(--color-error) 15%, transparent);
+            color: var(--color-error);
         }
 
         .job-status-badge.cancelled {
-            background: #f5f5f5;
-            color: #757575;
+            background: var(--color-hover);
+            color: var(--color-secondary);
         }
 
         .job-progress {
@@ -190,7 +182,7 @@
 
         .progress-bar {
             height: 8px;
-            background: #e0e0e0;
+            background: var(--color-border);
             border-radius: 4px;
             overflow: hidden;
             margin-bottom: 4px;
@@ -198,28 +190,28 @@
 
         .progress-fill {
             height: 100%;
-            background: #1976d2;
+            background: var(--color-accent);
             transition: width 0.3s ease;
         }
 
         .progress-fill.completed {
-            background: #4caf50;
+            background: var(--color-success);
         }
 
         .progress-fill.failed {
-            background: #f44336;
+            background: var(--color-error);
         }
 
         .progress-text {
             font-size: 0.8rem;
-            color: #666;
+            color: var(--color-secondary);
         }
 
         .job-meta {
             display: flex;
             gap: 20px;
             font-size: 0.85rem;
-            color: #666;
+            color: var(--color-secondary);
         }
 
         .job-meta-item {
@@ -251,59 +243,59 @@
         }
 
         .job-action-btn.primary {
-            background: #1976d2;
-            color: white;
+            background: var(--color-accent);
+            color: var(--color-surface);
         }
 
         .job-action-btn.primary:hover {
-            background: #1565c0;
+            opacity: 0.9;
         }
 
         .job-action-btn.secondary {
-            background: #f5f5f5;
-            color: #666;
+            background: var(--color-hover);
+            color: var(--color-secondary);
         }
 
         .job-action-btn.secondary:hover {
-            background: #e0e0e0;
+            background: var(--color-border);
         }
 
         .job-action-btn.danger {
-            background: #ffebee;
-            color: #c62828;
+            background: color-mix(in srgb, var(--color-error) 15%, transparent);
+            color: var(--color-error);
         }
 
         .job-action-btn.danger:hover {
-            background: #ef5350;
-            color: white;
+            background: var(--color-error);
+            color: var(--color-surface);
         }
 
         .empty-state {
             text-align: center;
             padding: 60px 20px;
-            color: #999;
+            color: var(--color-tertiary);
         }
 
         .empty-state .material-icons {
             font-size: 64px;
-            color: #ddd;
+            color: var(--color-border);
             margin-bottom: 16px;
         }
 
         .empty-state h3 {
-            color: #666;
+            color: var(--color-secondary);
             margin-bottom: 8px;
         }
 
         .loading {
             text-align: center;
             padding: 60px 20px;
-            color: #999;
+            color: var(--color-tertiary);
         }
 
         .loading .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #1976d2;
+            border: 4px solid var(--color-border);
+            border-top: 4px solid var(--color-accent);
             border-radius: 50%;
             width: 40px;
             height: 40px;
@@ -336,50 +328,54 @@
                 opacity: 0.5;
             }
         }
+
+        .job-description {
+            color: var(--color-secondary);
+            margin-bottom: 12px;
+        }
+
+        .job-pr-link {
+            color: var(--color-accent);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 12px;
+        }
+
+        .job-pr-link:hover {
+            opacity: 0.8;
+        }
+
+        .job-error {
+            color: var(--color-error);
+            margin-bottom: 12px;
+            padding: 12px;
+            background: color-mix(in srgb, var(--color-error) 10%, transparent);
+            border-radius: 6px;
+        }
     </style>
-</head>
+{% endblock %}
 
-<body>
-    <div class="app-layout">
-        <!-- Side Navigation -->
-        <nav class="sidebar" id="sidebar">
-            <button class="sidebar-toggle" onclick="toggleSidebar()">
-                <span class="material-icons">chevron_left</span>
-            </button>
-            <div class="sidebar-header">
-                <h1 class="sidebar-logo">
-                    <img src="/images/DependIQ.png" alt="DependIQ Logo"
-                        style="height: 32px; width: auto; margin-right: 8px; vertical-align: middle;">
-                    <span>DependIQ</span>
-                </h1>
-            </div>
-            <div class="sidebar-nav">
-                <a href="/profile" class="nav-item">
-                    <span class="material-icons">person</span>
-                    <span>Profile</span>
-                </a>
-                <a href="/projects" class="nav-item">
-                    <span class="material-icons">folder</span>
-                    <span>Projects</span>
-                </a>
-                <a href="/jobs" class="nav-item active">
-                    <span class="material-icons">history</span>
-                    <span>Job History</span>
-                </a>
-            </div>
-            <div class="sidebar-footer">
-                <button class="logout-btn" onclick="logout()">
-                    <span class="material-icons">logout</span>
-                    <span>Logout</span>
-                </button>
-            </div>
-        </nav>
+{% block sidebar_nav %}
+    <a href="/profile" class="nav-item">
+        <span class="material-icons">person</span>
+        <span>Profile</span>
+    </a>
+    <a href="/projects" class="nav-item">
+        <span class="material-icons">folder</span>
+        <span>Projects</span>
+    </a>
+    <a href="/jobs" class="nav-item active">
+        <span class="material-icons">history</span>
+        <span>Job History</span>
+    </a>
+{% endblock %}
 
-        <!-- Main Content -->
-        <div class="main-content">
+{% block content %}
             <div class="jobs-container">
                 <div class="jobs-header">
-                    <h1>📋 Job History</h1>
+                    <h1>Job History</h1>
                 </div>
 
                 <!-- Statistics -->
@@ -423,10 +419,9 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
+{% endblock %}
 
-    <script src="/static/js/main.js"></script>
+{% block scripts %}
     <script>
         let jobs = [];
         let currentFilter = 'all';
@@ -573,7 +568,7 @@
                             </div>
                         </div>
 
-                        ${job.job_description ? `<div style="color: #666; margin-bottom: 12px;">${escapeHtml(job.job_description)}</div>` : ''}
+                        ${job.job_description ? `<div class="job-description">${escapeHtml(job.job_description)}</div>` : ''}
 
                         ${job.status === 'running' ? `
                         <div class="job-progress">
@@ -586,7 +581,7 @@
 
                         ${job.status === 'completed' && job.pull_request_url ? `
                         <div style="margin-bottom: 12px;">
-                            <a href="${job.pull_request_url}" target="_blank" style="color: #1976d2; text-decoration: none; display: flex; align-items: center; gap: 4px;">
+                            <a href="${job.pull_request_url}" target="_blank" class="job-pr-link">
                                 <span class="material-icons" style="font-size: 16px;">open_in_new</span>
                                 View Pull Request
                             </a>
@@ -594,7 +589,7 @@
                         ` : ''}
 
                         ${job.error_message ? `
-                        <div style="color: #c62828; margin-bottom: 12px; padding: 12px; background: #ffebee; border-radius: 6px;">
+                        <div class="job-error">
                             <strong>Error:</strong> ${escapeHtml(job.error_message)}
                         </div>
                         ` : ''}
@@ -709,27 +704,5 @@
             div.textContent = text;
             return div.innerHTML;
         }
-
-        function logout() {
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
-            document.cookie = 'access_token=; path=/; max-age=0';
-            window.location.href = '/login';
-        }
-
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            sidebar.classList.toggle('collapsed');
-            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
-        }
-
-        // Restore sidebar state on page load
-        if (localStorage.getItem('sidebarCollapsed') === 'true') {
-            document.getElementById('sidebar').classList.add('collapsed');
-        }
-
-
     </script>
-</body>
-
-</html>
+{% endblock %}
