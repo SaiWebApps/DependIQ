@@ -10,7 +10,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.background import BackgroundTask
 
 from ..models.project import FileExtensionMap
-from .updates import completed_projects
+from ..services.update_service import completed_projects
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")

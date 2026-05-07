@@ -10,6 +10,7 @@ import concurrent.futures
 import json
 import logging
 import os
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -38,6 +39,22 @@ _EXCLUDED_PATH_SEGMENTS = frozenset({
     "node_modules/", ".idea/", ".vscode/", ".settings/",
 })
 
+# Maximum length for dependency name/version strings in prompts
+_MAX_DEP_FIELD_LENGTH = 256
+
+# Regex to strip control characters (excluding common whitespace)
+_CONTROL_CHAR_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]")
+
+
+def _sanitize_dep_field(value: str, max_length: int = _MAX_DEP_FIELD_LENGTH) -> str:
+    """Sanitize a dependency field value before injecting into an LLM prompt.
+
+    Strips control characters and truncates to a safe length to mitigate
+    prompt injection from untrusted build file content.
+    """
+    sanitized = _CONTROL_CHAR_RE.sub("", value)
+    return sanitized[:max_length]
+
 
 @dataclass
 class DependencyAgent:
@@ -63,7 +80,7 @@ class DependencyAgent:
         ecosystem = self._project_type_to_ecosystem(project_type)
 
         dep_descriptions = "\n".join(
-            f"- {dep.name}: currently at {dep.current_version} ({dep.description})"
+            f"- {_sanitize_dep_field(dep.name)}: currently at {_sanitize_dep_field(dep.current_version)} ({_sanitize_dep_field(dep.description)})"
             for dep in dependencies
         )
 
@@ -333,7 +350,7 @@ has already been updated separately."""
     ) -> dict:
         """Analyze dependencies for known security vulnerabilities."""
         dep_list = "\n".join(
-            f"- {dep.name}@{dep.current_version}" for dep in dependencies
+            f"- {_sanitize_dep_field(dep.name)}@{_sanitize_dep_field(dep.current_version)}" for dep in dependencies
         )
 
         prompt = f"""Analyze these {project_type} dependencies for security vulnerabilities.
