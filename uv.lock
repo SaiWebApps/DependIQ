@@ -416,7 +416,7 @@ wheels = [
 [[package]]
 name = "dependiq"
 version = "0.2.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
     { name = "alembic" },
