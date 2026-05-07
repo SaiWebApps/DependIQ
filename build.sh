@@ -3,11 +3,9 @@
 
 set -o errexit  # Exit on error
 
-echo "🚀 Starting DependIQ build process..."
+echo "Starting DependIQ build process..."
 
-# Install Python dependencies
-echo "📦 Installing dependencies..."
 pip install --upgrade pip
-pip install -r requirements.txt
+pip install .
 
-echo "✅ Build completed successfully!"
+echo "Build completed successfully!"

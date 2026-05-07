@@ -3,8 +3,8 @@
 
 set -o errexit  # Exit on error
 
-echo "🗄️  Running database migrations..."
+echo "Running database migrations..."
 alembic upgrade head
 
-echo "🚀 Starting application..."
-exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
+echo "Starting application..."
+exec gunicorn main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-8000}
