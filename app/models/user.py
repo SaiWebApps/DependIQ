@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from .project_history import ProjectHistory
     from .project_library import ProjectLibrary
     from .user_preference import UserPreference
+    from .workspace import Workspace
 
 
 class User(Base):
@@ -79,6 +80,9 @@ class User(Base):
     )
     jobs: Mapped[list["Job"]] = relationship(
         "Job", back_populates="user", cascade="all, delete-orphan"
+    )
+    workspaces: Mapped[list["Workspace"]] = relationship(
+        "Workspace", back_populates="owner", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:

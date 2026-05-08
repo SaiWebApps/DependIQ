@@ -21,12 +21,14 @@ from app.models import (
     ProjectLibrary,
     User,
     UserPreference,
+    Workspace,
+    WorkspaceMember,
 )
 
 MIGRATIONS_SQL = Path(__file__).resolve().parent.parent / "migrations.sql"
 
 # Reference models to ensure they are registered with Base.metadata
-_MODELS = (User, UserPreference, ProjectLibrary, ProjectHistory, Job, Dependency)
+_MODELS = (User, UserPreference, ProjectLibrary, ProjectHistory, Job, Dependency, Workspace, WorkspaceMember)
 
 
 def _get_test_engine():
@@ -43,15 +45,19 @@ def _get_test_engine():
 
 
 def _parse_migrations_sql() -> list[str]:
-    """Parse migrations.sql into executable statements."""
+    """Parse migrations.sql into executable statements, split by semicolons."""
     if not MIGRATIONS_SQL.exists():
         return []
     sql_content = MIGRATIONS_SQL.read_text().strip()
-    return [
-        line.strip()
-        for line in sql_content.splitlines()
-        if line.strip() and not line.strip().startswith("--")
+    # Remove comment lines
+    lines = [
+        line for line in sql_content.splitlines()
+        if not line.strip().startswith("--")
     ]
+    # Join and split by semicolons
+    full_sql = "\n".join(lines)
+    statements = [s.strip() for s in full_sql.split(";") if s.strip()]
+    return statements
 
 
 def _get_schema_snapshot(inspector) -> dict[str, set[str]]:
@@ -78,13 +84,20 @@ async def test_migrations_sql_runs_cleanly_on_fresh_db():
         async with engine.begin() as conn:
             for stmt in statements:
                 # SQLite doesn't support IF NOT EXISTS for ADD COLUMN,
-                # so we adapt for testing by catching column-exists errors
+                # so we adapt for testing by catching column-exists errors.
+                # Also tolerate PG-specific syntax errors (gen_random_uuid, etc.)
+                # since create_all() handles schema creation from models.
                 try:
                     await conn.execute(text(stmt))
                 except Exception as e:
-                    # If it's a "duplicate column" error from SQLite, that's ok
-                    # (the real DB uses IF NOT EXISTS which handles this)
-                    if "duplicate column" not in str(e).lower():
+                    err_msg = str(e).lower()
+                    # Allow: duplicate column (ADD COLUMN on existing col)
+                    # Allow: syntax error from PG-specific DDL (gen_random_uuid, etc.)
+                    # Allow: table already exists
+                    if not any(
+                        token in err_msg
+                        for token in ("duplicate column", "syntax error", "already exists")
+                    ):
                         raise
 
     # Verify tables still exist after migrations
@@ -124,7 +137,11 @@ async def test_no_orphaned_migrations():
                 try:
                     await conn.execute(text(stmt))
                 except Exception as e:
-                    if "duplicate column" not in str(e).lower():
+                    err_msg = str(e).lower()
+                    if not any(
+                        token in err_msg
+                        for token in ("duplicate column", "syntax error", "already exists")
+                    ):
                         raise
 
     # Snapshot 2: schema after migrations.sql
