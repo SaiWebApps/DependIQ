@@ -1,81 +1,167 @@
 <!DOCTYPE html>
-<html>
+<html lang="en" class="h-full">
 
 <head>
   <title>{% block title %}DependIQ{% endblock %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
   <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
   <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
   <link rel="manifest" href="/images/site.webmanifest">
-  <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <script src="/static/js/theme.js?v=2"></script>
-  <link rel="stylesheet" href="/static/css/main.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.14.9/dist/cdn.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              200: '#c7d2fe',
+              300: '#a5b4fc',
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3',
+              900: '#312e81',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    [x-cloak] { display: none !important; }
+  </style>
   {% block head %}{% endblock %}
 </head>
 
-<body>
-  <div class="app-layout">
-    <!-- Side Navigation -->
-    <nav class="sidebar" id="sidebar">
-      <button class="sidebar-toggle" onclick="toggleSidebar()">
-        <span class="material-icons">chevron_left</span>
-      </button>
-      <div class="sidebar-header">
-        <h1 class="sidebar-logo">
-          <img src="/images/DependIQ.png" alt="DependIQ Logo"
-            style="height: 32px; width: auto; margin-right: 8px; vertical-align: middle;">
-          <span>DependIQ</span>
-        </h1>
+<body class="h-full bg-slate-900 text-slate-50 font-sans antialiased" x-data="{ sidebarOpen: localStorage.getItem('sidebarOpen') !== 'false' }">
+  <div class="flex h-full">
+
+    <!-- Sidebar -->
+    <aside
+      class="flex flex-col border-r border-slate-800 bg-slate-950 transition-all duration-200 ease-in-out"
+      :class="sidebarOpen ? 'w-64' : 'w-16'"
+    >
+      <!-- Sidebar Header -->
+      <div class="flex h-14 items-center border-b border-slate-800 px-4">
+        <a href="/" class="flex items-center gap-2 overflow-hidden">
+          <img src="/images/DependIQ.png" alt="DependIQ" class="h-7 w-auto flex-shrink-0">
+          <span class="text-sm font-semibold text-slate-50 whitespace-nowrap transition-opacity duration-200"
+                :class="sidebarOpen ? 'opacity-100' : 'opacity-0 w-0'">DependIQ</span>
+        </a>
       </div>
-      <div class="sidebar-nav">
+
+      <!-- Navigation -->
+      <nav class="flex-1 overflow-y-auto px-2 py-4 space-y-1">
         {% block sidebar_nav %}
-        <a href="/profile" class="nav-item{% if active_page == 'profile' %} active{% endif %}">
-          <span class="material-icons">person</span>
-          <span>Profile</span>
+        <a href="/profile"
+           class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors {% if active_page == 'profile' %}bg-slate-800 text-slate-50{% else %}text-slate-400 hover:bg-slate-800/50 hover:text-slate-200{% endif %}">
+          <svg class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+          </svg>
+          <span class="whitespace-nowrap" :class="sidebarOpen ? '' : 'sr-only'">Profile</span>
         </a>
-        <a href="/projects" class="nav-item{% if active_page == 'projects' %} active{% endif %}">
-          <span class="material-icons">folder</span>
-          <span>Projects</span>
+        <a href="/projects"
+           class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors {% if active_page == 'projects' %}bg-slate-800 text-slate-50{% else %}text-slate-400 hover:bg-slate-800/50 hover:text-slate-200{% endif %}">
+          <svg class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
+          </svg>
+          <span class="whitespace-nowrap" :class="sidebarOpen ? '' : 'sr-only'">Projects</span>
         </a>
-        <a href="/jobs" class="nav-item{% if active_page == 'jobs' %} active{% endif %}">
-          <span class="material-icons">history</span>
-          <span>Job History</span>
+        <a href="/jobs"
+           class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors {% if active_page == 'jobs' %}bg-slate-800 text-slate-50{% else %}text-slate-400 hover:bg-slate-800/50 hover:text-slate-200{% endif %}">
+          <svg class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+          </svg>
+          <span class="whitespace-nowrap" :class="sidebarOpen ? '' : 'sr-only'">Job History</span>
         </a>
         {% endblock %}
+      </nav>
+
+      <!-- Workspace Placeholder -->
+      <div class="border-t border-slate-800 px-3 py-3" x-show="sidebarOpen" x-cloak>
+        <p class="text-xs font-medium uppercase tracking-wider text-slate-500 mb-2">Workspaces</p>
+        <div class="space-y-1">
+          <div class="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-slate-400">
+            <span class="h-2 w-2 rounded-full bg-indigo-500"></span>
+            <span>Personal</span>
+          </div>
+        </div>
       </div>
-      <div class="sidebar-footer">
-        <button class="logout-btn" onclick="logout()">
-          <span class="material-icons">logout</span>
-          <span>Logout</span>
+
+      <!-- Sidebar Footer -->
+      <div class="border-t border-slate-800 p-3">
+        <button
+          @click="sidebarOpen = !sidebarOpen; localStorage.setItem('sidebarOpen', sidebarOpen)"
+          class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 transition-colors">
+          <svg class="h-5 w-5 flex-shrink-0 transition-transform duration-200" :class="sidebarOpen ? '' : 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M18.75 19.5l-7.5-7.5 7.5-7.5m-6 15L5.25 12l7.5-7.5" />
+          </svg>
+          <span class="whitespace-nowrap" :class="sidebarOpen ? '' : 'sr-only'">Collapse</span>
         </button>
       </div>
-    </nav>
+    </aside>
 
-    <!-- Main Content -->
-    <div class="main-content">
-      {% block content %}{% endblock %}
+    <!-- Main Area -->
+    <div class="flex flex-1 flex-col overflow-hidden">
+
+      <!-- Top Bar -->
+      <header class="flex h-14 items-center justify-between border-b border-slate-800 bg-slate-900 px-6">
+        <div class="flex items-center gap-4">
+          <h2 class="text-sm font-medium text-slate-300">{% block page_title %}{% endblock %}</h2>
+        </div>
+        <div class="flex items-center gap-3" x-data="{ menuOpen: false }">
+          <button
+            @click="menuOpen = !menuOpen"
+            class="relative flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-xs font-medium text-white hover:bg-indigo-500 transition-colors">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+            </svg>
+          </button>
+          <!-- Dropdown Menu -->
+          <div
+            x-show="menuOpen"
+            @click.outside="menuOpen = false"
+            x-cloak
+            x-transition:enter="transition ease-out duration-100"
+            x-transition:enter-start="opacity-0 scale-95"
+            x-transition:enter-end="opacity-100 scale-100"
+            x-transition:leave="transition ease-in duration-75"
+            x-transition:leave-start="opacity-100 scale-100"
+            x-transition:leave-end="opacity-0 scale-95"
+            class="absolute right-4 top-12 z-50 w-48 rounded-lg border border-slate-700 bg-slate-800 py-1 shadow-xl">
+            <a href="/profile" class="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-700/50 hover:text-slate-100">Profile</a>
+            <hr class="my-1 border-slate-700">
+            <button onclick="logout()" class="block w-full px-4 py-2 text-left text-sm text-slate-300 hover:bg-slate-700/50 hover:text-slate-100">
+              Sign out
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Page Content -->
+      <main class="flex-1 overflow-y-auto p-6">
+        {% block content %}{% endblock %}
+      </main>
     </div>
   </div>
 
-  <script src="/static/js/main.js"></script>
   <script>
     function logout() {
       fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' })
         .finally(() => { window.location.href = '/login'; });
-    }
-
-    function toggleSidebar() {
-      const sidebar = document.getElementById('sidebar');
-      sidebar.classList.toggle('collapsed');
-      localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
-    }
-
-    // Restore sidebar state on page load
-    if (localStorage.getItem('sidebarCollapsed') === 'true') {
-      document.getElementById('sidebar').classList.add('collapsed');
     }
   </script>
   {% block scripts %}{% endblock %}
