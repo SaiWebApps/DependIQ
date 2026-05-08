@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+
+{% block title %}Workspaces - DependIQ{% endblock %}
+
+{% block sidebar_nav %}
+    <a href="/workspaces" class="nav-item active">
+        <span class="material-icons">workspaces</span>
+        <span>Workspaces</span>
+    </a>
+    <a href="/profile" class="nav-item">
+        <span class="material-icons">person</span>
+        <span>Profile</span>
+    </a>
+    <a href="/projects" class="nav-item">
+        <span class="material-icons">folder</span>
+        <span>Projects</span>
+    </a>
+    <a href="/jobs" class="nav-item">
+        <span class="material-icons">history</span>
+        <span>Job History</span>
+    </a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-8 font-[Inter]" x-data="workspacesApp()">
+
+    <!-- User Profile Card -->
+    <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 mb-8">
+        <div class="flex items-center gap-4">
+            <!-- Avatar (initials circle) -->
+            <div class="w-14 h-14 rounded-full bg-indigo-500 flex items-center justify-center text-slate-50 text-xl font-semibold shrink-0">
+                {{ user.email[0]|upper }}
+            </div>
+            <div class="flex-1 min-w-0">
+                <h2 class="text-slate-50 text-lg font-semibold truncate">{{ user.email.split('@')[0] }}</h2>
+                <p class="text-slate-400 text-sm truncate">{{ user.email }}</p>
+            </div>
+            <!-- Connected accounts -->
+            <div class="flex items-center gap-2">
+                {% if user.github_access_token %}
+                <div class="flex items-center gap-1.5 bg-slate-700 rounded-lg px-3 py-1.5" title="GitHub connected">
+                    <svg class="w-4 h-4 text-slate-300" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                    <span class="text-xs text-slate-300 font-medium">GitHub</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Workspace List Header -->
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-slate-50 text-2xl font-semibold">Your Workspaces</h1>
+        <button
+            @click="createWorkspace()"
+            class="inline-flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white font-medium px-4 py-2.5 rounded-lg transition-colors duration-150"
+        >
+            <span class="material-icons text-lg">add</span>
+            New Workspace
+        </button>
+    </div>
+
+    <!-- Inline Create Form (hidden by default, shown via HTMX response) -->
+    <div id="create-form-area"></div>
+
+    <!-- Workspace Grid -->
+    <div id="workspace-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% if workspaces %}
+            {% for ws in workspaces %}
+            <div id="workspace-card-{{ ws.id }}" class="group bg-slate-800 border border-slate-700 rounded-xl p-5 hover:border-indigo-500/50 transition-all duration-200 cursor-pointer relative"
+                 x-data="{ editing: false, name: '{{ ws.name }}' }">
+
+                <!-- Delete button (top right, visible on hover) -->
+                <button
+                    @click.stop="if(confirm('Delete workspace &quot;{{ ws.name }}&quot;? This cannot be undone.')) { deleteWorkspace('{{ ws.id }}') }"
+                    class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 transition-opacity duration-150"
+                    title="Delete workspace"
+                >
+                    <span class="material-icons text-lg">delete_outline</span>
+                </button>
+
+                <!-- Workspace name (inline editable) -->
+                <div @click.stop>
+                    <h3 x-show="!editing"
+                        @dblclick="editing = true; $nextTick(() => $refs.nameInput.focus())"
+                        class="text-slate-50 font-semibold text-base mb-1 pr-6 truncate"
+                        :title="name">
+                        <span x-text="name"></span>
+                    </h3>
+                    <input x-show="editing"
+                           x-ref="nameInput"
+                           x-model="name"
+                           @blur="editing = false; renameWorkspace('{{ ws.id }}', name)"
+                           @keydown.enter="editing = false; renameWorkspace('{{ ws.id }}', name)"
+                           @keydown.escape="editing = false; name = '{{ ws.name }}'"
+                           class="bg-slate-700 border border-indigo-500 text-slate-50 rounded px-2 py-1 text-base font-semibold w-full outline-none mb-1"
+                           type="text">
+                </div>
+
+                <!-- Project count -->
+                <p class="text-slate-400 text-sm mb-3">
+                    {{ ws.project_count }} project{{ 's' if ws.project_count != 1 else '' }}
+                </p>
+
+                <!-- Created date -->
+                <p class="text-slate-500 text-xs">
+                    Created {{ ws.created_at.strftime('%b %d, %Y') }}
+                </p>
+            </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <!-- Empty State -->
+    {% if not workspaces %}
+    <div id="empty-state" class="mt-4 bg-slate-800 border border-slate-700 rounded-xl p-10 text-center">
+        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-700 flex items-center justify-center">
+            <span class="material-icons text-3xl text-slate-400">workspaces</span>
+        </div>
+        <h2 class="text-slate-50 text-xl font-semibold mb-2">No workspaces yet</h2>
+        <p class="text-slate-400 text-sm mb-6 max-w-md mx-auto">
+            Workspaces help you organize projects and collaborate with your team.
+        </p>
+
+        <!-- Guided checklist -->
+        <div class="text-left max-w-sm mx-auto mb-8 space-y-3">
+            <div class="flex items-start gap-3">
+                <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 text-xs font-bold shrink-0 mt-0.5">1</span>
+                <p class="text-slate-300 text-sm">Create a workspace to group your projects</p>
+            </div>
+            <div class="flex items-start gap-3">
+                <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 text-xs font-bold shrink-0 mt-0.5">2</span>
+                <p class="text-slate-300 text-sm">Link GitHub repos or upload zip files</p>
+            </div>
+            <div class="flex items-start gap-3">
+                <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 text-xs font-bold shrink-0 mt-0.5">3</span>
+                <p class="text-slate-300 text-sm">Run analysis to map dependencies</p>
+            </div>
+        </div>
+
+        <button
+            @click="createWorkspace()"
+            class="inline-flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white font-medium px-6 py-3 rounded-lg transition-colors duration-150"
+        >
+            <span class="material-icons text-lg">add</span>
+            Create Your First Workspace
+        </button>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function workspacesApp() {
+    return {
+        async createWorkspace() {
+            try {
+                const response = await fetch('/api/workspaces', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({})
+                });
+
+                if (!response.ok) {
+                    alert('Failed to create workspace');
+                    return;
+                }
+
+                const ws = await response.json();
+
+                // Remove empty state if present
+                const emptyState = document.getElementById('empty-state');
+                if (emptyState) emptyState.remove();
+
+                // Add new card to grid
+                const grid = document.getElementById('workspace-grid');
+                const card = document.createElement('div');
+                card.id = `workspace-card-${ws.id}`;
+                card.className = 'group bg-slate-800 border border-slate-700 rounded-xl p-5 hover:border-indigo-500/50 transition-all duration-200 cursor-pointer relative opacity-0';
+                card.setAttribute('x-data', `{ editing: false, name: '${ws.name}' }`);
+                card.innerHTML = `
+                    <button
+                        @click.stop="if(confirm('Delete this workspace?')) { deleteWorkspace('${ws.id}') }"
+                        class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 transition-opacity duration-150"
+                        title="Delete workspace"
+                    >
+                        <span class="material-icons text-lg">delete_outline</span>
+                    </button>
+                    <div @click.stop>
+                        <h3 x-show="!editing"
+                            @dblclick="editing = true; $nextTick(() => $refs.nameInput.focus())"
+                            class="text-slate-50 font-semibold text-base mb-1 pr-6 truncate"
+                            :title="name">
+                            <span x-text="name"></span>
+                        </h3>
+                        <input x-show="editing"
+                               x-ref="nameInput"
+                               x-model="name"
+                               @blur="editing = false; renameWorkspace('${ws.id}', name)"
+                               @keydown.enter="editing = false; renameWorkspace('${ws.id}', name)"
+                               @keydown.escape="editing = false; name = '${ws.name}'"
+                               class="bg-slate-700 border border-indigo-500 text-slate-50 rounded px-2 py-1 text-base font-semibold w-full outline-none mb-1"
+                               type="text">
+                    </div>
+                    <p class="text-slate-400 text-sm mb-3">0 projects</p>
+                    <p class="text-slate-500 text-xs">Created ${new Date(ws.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                `;
+
+                grid.prepend(card);
+
+                // Animate in
+                requestAnimationFrame(() => {
+                    card.classList.remove('opacity-0');
+                    card.classList.add('opacity-100', 'transition-opacity', 'duration-300');
+                });
+
+            } catch (err) {
+                console.error('Create workspace failed:', err);
+                alert('An error occurred while creating the workspace.');
+            }
+        },
+
+        async deleteWorkspace(id) {
+            try {
+                const response = await fetch(`/api/workspaces/${id}`, {
+                    method: 'DELETE',
+                    credentials: 'same-origin',
+                });
+
+                if (!response.ok && response.status !== 204) {
+                    alert('Failed to delete workspace');
+                    return;
+                }
+
+                // Remove card with animation
+                const card = document.getElementById(`workspace-card-${id}`);
+                if (card) {
+                    card.classList.add('opacity-0', 'scale-95', 'transition-all', 'duration-200');
+                    setTimeout(() => card.remove(), 200);
+                }
+
+                // Show empty state if no cards left
+                setTimeout(() => {
+                    const grid = document.getElementById('workspace-grid');
+                    if (grid && grid.children.length === 0) {
+                        window.location.reload();
+                    }
+                }, 300);
+
+            } catch (err) {
+                console.error('Delete workspace failed:', err);
+                alert('An error occurred while deleting the workspace.');
+            }
+        },
+
+        async renameWorkspace(id, newName) {
+            if (!newName || !newName.trim()) return;
+
+            try {
+                await fetch(`/api/workspaces/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ name: newName.trim() })
+                });
+            } catch (err) {
+                console.error('Rename workspace failed:', err);
+            }
+        }
+    };
+}
+
+// Make functions available globally for Alpine x-data scope
+window.deleteWorkspace = async function(id) {
+    const app = document.querySelector('[x-data="workspacesApp()"]').__x.$data;
+    await app.deleteWorkspace(id);
+};
+
+window.renameWorkspace = async function(id, name) {
+    const app = document.querySelector('[x-data="workspacesApp()"]').__x.$data;
+    await app.renameWorkspace(id, name);
+};
+</script>
+{% endblock %}

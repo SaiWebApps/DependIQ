@@ -9,7 +9,7 @@ Architecture:
 """
 
 from .agent import Agent, AgentResult
-from .events import AnalysisEvent
+from .events import AnalysisEvent, EventType
 from .router import ModelRouter, RoutingMode, TaskType
 from .tools import ToolRegistry, create_default_registry
 
@@ -17,6 +17,7 @@ __all__ = [
     "Agent",
     "AgentResult",
     "AnalysisEvent",
+    "EventType",
     "ModelRouter",
     "RoutingMode",
     "TaskType",

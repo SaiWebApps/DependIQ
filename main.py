@@ -75,14 +75,45 @@ def login_page(request: Request):
 
 @app.get("/profile")
 async def profile_page(request: Request, db: AsyncSession = Depends(get_db)):
-    """User profile page - requires authentication"""
+    """User profile page - redirects to workspaces"""
+    return RedirectResponse(url="/workspaces", status_code=303)
+
+
+@app.get("/workspaces")
+async def workspaces_page(request: Request, db: AsyncSession = Depends(get_db)):
+    """Workspaces page - shows user's workspaces with project counts"""
+    from sqlalchemy import func, select
+
+    from app.models.project_library import ProjectLibrary
+    from app.models.workspace import Workspace
+    from app.models.workspace_member import WorkspaceMember
+
     user = await get_current_user_from_cookie(request, db)
 
     if not user:
-        return RedirectResponse(url="/login?return_to=/profile", status_code=303)
+        return RedirectResponse(url="/login?return_to=/workspaces", status_code=303)
+
+    result = await db.execute(
+        select(Workspace)
+        .join(WorkspaceMember, WorkspaceMember.workspace_id == Workspace.id)
+        .where(WorkspaceMember.user_id == user.id)
+        .order_by(Workspace.created_at.desc())
+    )
+    workspaces = result.scalars().all()
+
+    workspace_data = []
+    for ws in workspaces:
+        count_result = await db.execute(
+            select(func.count(ProjectLibrary.id)).where(
+                ProjectLibrary.workspace_id == ws.id
+            )
+        )
+        project_count = count_result.scalar() or 0
+        workspace_data.append({"workspace": ws, "project_count": project_count})
 
     return templates.TemplateResponse(
-        "profile.html", {"request": request, "user": user}
+        "workspaces.html",
+        {"request": request, "user": user, "workspace_data": workspace_data},
     )
 
 

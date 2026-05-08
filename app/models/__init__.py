@@ -2,6 +2,7 @@
 Data models for the dependiq application
 """
 
+from .analysis_task import AnalysisTask
 from .dependency import Dependency
 from .exclusions import ArtifactExclusionConfig
 from .job import Job, JobStatus, JobType
@@ -14,6 +15,7 @@ from .workspace import Workspace
 from .workspace_member import WorkspaceMember
 
 __all__ = [
+    "AnalysisTask",
     "ArtifactExclusionConfig",
     "Dependency",
     "FileExtensionMap",

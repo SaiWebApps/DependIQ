@@ -5,7 +5,7 @@ API routes for the dependiq application
 from fastapi import APIRouter
 
 # Import route modules
-from . import analysis, auth, files, jobs, progress, projects, updates, user, workspaces
+from . import analysis, auth, files, jobs, pipeline, progress, projects, stream, updates, user, workspaces
 
 
 def create_router() -> APIRouter:
@@ -22,6 +22,8 @@ def create_router() -> APIRouter:
     router.include_router(progress.router, tags=["progress"])
     router.include_router(updates.router, tags=["updates"])
     router.include_router(files.router, tags=["files"])
+    router.include_router(pipeline.router, tags=["pipeline"])
+    router.include_router(stream.router, tags=["stream"])
 
     return router
 

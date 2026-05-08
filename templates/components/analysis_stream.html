@@ -1,0 +1,155 @@
+{# Analysis stream component - include in any page that needs live analysis output #}
+{# Usage: {% include 'components/analysis_stream.html' %} #}
+{# Requires: task_id variable in template context #}
+
+<div id="analysis-stream" class="space-y-3">
+
+    {# Progress bar #}
+    <div id="progress-section" class="mb-4">
+        <div class="flex justify-between text-sm text-slate-400 mb-1">
+            <span id="phase-label">Initializing...</span>
+            <span id="progress-pct">0%</span>
+        </div>
+        <div class="w-full bg-slate-700 rounded-full h-2">
+            <div id="progress-bar" class="bg-indigo-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+    </div>
+
+    {# Thinking output (streaming text) #}
+    <div id="thinking-section" class="bg-slate-800 rounded-lg p-4 border border-slate-700">
+        <h3 class="text-sm font-medium text-slate-400 mb-2 flex items-center gap-2">
+            <span id="thinking-indicator" class="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></span>
+            Analysis in progress
+        </h3>
+        <div id="thinking-output" class="text-sm text-slate-300 space-y-1 max-h-64 overflow-y-auto font-mono">
+        </div>
+    </div>
+
+    {# Tool call events (shows what the AI is doing) #}
+    <div id="tool-section" class="space-y-2">
+        <h3 class="text-sm font-medium text-slate-400">Actions taken</h3>
+        <div id="tool-events" class="space-y-1">
+        </div>
+    </div>
+
+    {# Final result (appears when complete) #}
+    <div id="final-result" class="hidden">
+    </div>
+</div>
+
+<script>
+(function() {
+    const taskId = "{{ task_id }}";
+    if (!taskId) return;
+
+    const evtSource = new EventSource(`/api/stream/${taskId}`);
+
+    // Progress updates
+    evtSource.addEventListener("progress", function(e) {
+        const data = JSON.parse(e.data);
+        const info = data.data || {};
+        const phase = info.phase || data.content || "";
+        const percent = info.percent || 0;
+
+        const bar = document.getElementById("progress-bar");
+        const pct = document.getElementById("progress-pct");
+        const label = document.getElementById("phase-label");
+
+        if (bar) bar.style.width = percent + "%";
+        if (pct) pct.textContent = percent + "%";
+        if (label) label.textContent = phase;
+    });
+
+    // Thinking events - append to thinking output
+    evtSource.addEventListener("thinking", function(e) {
+        const data = JSON.parse(e.data);
+        const output = document.getElementById("thinking-output");
+        if (output) {
+            const p = document.createElement("p");
+            p.className = "text-slate-300 text-sm";
+            p.textContent = data.content || "";
+            output.appendChild(p);
+            output.scrollTop = output.scrollHeight;
+        }
+    });
+
+    // Tool call events
+    evtSource.addEventListener("tool_call", function(e) {
+        const data = JSON.parse(e.data);
+        const container = document.getElementById("tool-events");
+        if (container) {
+            const div = document.createElement("div");
+            div.className = "flex items-center gap-2 text-xs text-slate-400";
+            const name = (data.data && data.data.name) || "unknown";
+            div.innerHTML = '<span class="text-indigo-400">&#9654;</span> Calling ' + escapeHtml(name) + '...';
+            container.appendChild(div);
+        }
+    });
+
+    // Tool result events
+    evtSource.addEventListener("tool_result", function(e) {
+        const data = JSON.parse(e.data);
+        const container = document.getElementById("tool-events");
+        if (container) {
+            const div = document.createElement("div");
+            div.className = "flex items-center gap-2 text-xs text-emerald-400";
+            const name = (data.data && data.data.name) || "unknown";
+            div.innerHTML = '<span>&#10003;</span> ' + escapeHtml(name) + ' complete';
+            container.appendChild(div);
+        }
+    });
+
+    // Final result
+    evtSource.addEventListener("result", function(e) {
+        const data = JSON.parse(e.data);
+        const container = document.getElementById("final-result");
+        const indicator = document.getElementById("thinking-indicator");
+
+        if (container) {
+            container.classList.remove("hidden");
+            container.innerHTML =
+                '<div class="bg-slate-800 rounded-lg p-4 border border-emerald-700">' +
+                '<h3 class="text-emerald-400 text-sm font-medium mb-2">Analysis Complete</h3>' +
+                '<div class="text-slate-300 text-sm whitespace-pre-wrap">' + escapeHtml(data.content || "") + '</div>' +
+                '</div>';
+        }
+        if (indicator) {
+            indicator.classList.remove("animate-pulse", "bg-indigo-500");
+            indicator.classList.add("bg-emerald-500");
+        }
+    });
+
+    // Error events
+    evtSource.addEventListener("error", function(e) {
+        // EventSource fires generic errors on disconnect - check if it's our custom event
+        if (e.data) {
+            const data = JSON.parse(e.data);
+            const container = document.getElementById("final-result");
+            if (container) {
+                container.classList.remove("hidden");
+                container.innerHTML =
+                    '<div class="bg-red-900/20 rounded-lg p-4 border border-red-700">' +
+                    '<h3 class="text-red-400 text-sm font-medium mb-2">Error</h3>' +
+                    '<div class="text-red-300 text-sm">' + escapeHtml(data.content || "Unknown error") + '</div>' +
+                    '</div>';
+            }
+        }
+    });
+
+    // Stream complete
+    evtSource.addEventListener("complete", function(e) {
+        evtSource.close();
+        const indicator = document.getElementById("thinking-indicator");
+        if (indicator) {
+            indicator.classList.remove("animate-pulse", "bg-indigo-500");
+            indicator.classList.add("bg-emerald-500");
+        }
+    });
+
+    function escapeHtml(text) {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+    }
+})();
+</script>
