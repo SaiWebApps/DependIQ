@@ -68,7 +68,8 @@ async def init_db():
     """
     Initialize database tables
 
-    Note: In production, use Alembic migrations instead
+    Creates all tables using create_all(checkfirst=True).
+    For schema evolution, see migrations.sql and app/init_db.py.
     """
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

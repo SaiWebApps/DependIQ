@@ -14,7 +14,7 @@
 
 ## Render Deployment
 
-> **STOP. Before ANY push to main:** Run `make verify-deploy`. If it fails, DO NOT push.
+> **STOP. Before ANY push to main:** Run `make test`. If it fails, DO NOT push.
 
 > **NEVER use `generateValue: true`** in render.yaml for secrets (JWT, session, etc.). It regenerates on every blueprint sync, killing all user sessions.
 
@@ -24,7 +24,7 @@
 
 ## Build Verification
 
-> **After modifying `requirements.txt`, `build.sh`, or `pyproject.toml`:** Run `make verify-deploy` to simulate Render's build locally before pushing.
+> **After modifying `requirements.txt`, `build.sh`, or `pyproject.toml`:** Run `make test` to verify nothing broke before pushing.
 
 ## Auth / Cookies
 
@@ -36,21 +36,27 @@
 
 > **Before touching auth code, curl the authorize URL first.** `curl -s -o /dev/null -w "%{http_code} %{redirect_url}" "URL"` — if 302 to provider, infrastructure works. The bug is elsewhere.
 
-## Database Migrations
+## Database Schema
 
-> **STOP. NEVER hand-write migration files.** Use `make migrate MSG="description"`. If `alembic/versions/` needs changes, the ONLY valid commands are `make migrate` and `make db-reset`. Direct writes to `alembic/versions/` are blocked by a hook.
+> **There is NO Alembic.** Migrations use `create_all()` + idempotent SQL. See `/migrate` skill for full docs.
 
-> **NEVER invent revision IDs.** Alembic generates them with `uuid4().hex[:12]`. If you see yourself typing a revision ID, you are doing it wrong.
+> **New table?** Add the model to `app/models/`. `create_all(checkfirst=True)` handles it automatically on next deploy.
 
-> **Before ANY schema change:** Edit the SQLAlchemy model FIRST, then run `make migrate MSG="description"`. Never the other way around.
+> **New column on existing table?** Edit the model FIRST, then add one line to `migrations.sql`: `ALTER TABLE x ADD COLUMN IF NOT EXISTS y type;`
 
-> **alembic/env.py MUST import app.models.** Without this, autogenerate produces empty migrations (pass). Verify by checking the generated file contains CREATE TABLE statements.
+> **Run `make test` after any schema change.** The `test_schema_sync.py` tests catch mismatches between models and `migrations.sql`.
+
+> **Run `make migrate` to apply locally.** It runs `python -m app.init_db` which does `create_all()` + `migrations.sql`.
+
+> **NEVER write DROP or RENAME without user confirmation.** These are destructive and irreversible.
+
+> **To start fresh locally:** `make db-reset` drops and recreates everything from models.
 
 ## Makefile
 
 > **NEVER use `|| true` or `2>/dev/null` on critical-path commands.** If a migration, DB creation, or service start fails, the Makefile MUST exit non-zero. Use `|| (echo "ERROR: ..."; exit 1)`.
 
-> **`make lint` proves NOTHING about behavior.** Only `make test` (full suite, 293+ tests) proves correctness.
+> **`make lint` proves NOTHING about behavior.** Only `make test` (full suite, 312+ tests) proves correctness.
 
 ## Meetings
 

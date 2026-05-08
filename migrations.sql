@@ -1,0 +1,4 @@
+-- DependIQ schema migrations
+-- Format: one idempotent ALTER statement per line (e.g. ADD COLUMN IF NOT EXISTS)
+-- Each statement must be safe to run on every deploy.
+-- Add a date comment above each statement explaining when/why it was added.

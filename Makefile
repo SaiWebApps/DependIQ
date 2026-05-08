@@ -1,4 +1,4 @@
-.PHONY: help test lint format run setup clean migrate db-check db-start db-stop db-reset db-status render
+.PHONY: help test lint format run setup clean migrate db-start db-stop db-reset db-status render
 
 UV := uv
 
@@ -31,8 +31,7 @@ help:
 	@echo "  make setup      First-time project setup"
 	@echo "  make clean      Remove caches"
 	@echo ""
-	@echo "  make migrate MSG='...'  Generate migration from model changes"
-	@echo "  make db-check   Verify migration chain integrity"
+	@echo "  make migrate    Run schema init (create tables + migrations.sql)"
 	@echo "  make db-start   Start PostgreSQL"
 	@echo "  make db-stop    Stop PostgreSQL"
 	@echo "  make db-reset   Drop and recreate database (destructive)"
@@ -63,30 +62,14 @@ setup: _ensure-env _ensure-db
 clean:
 	@find . -type f -name "*.pyc" -delete
 	@find . -type d -name "__pycache__" -delete
-	@find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
-	@find . -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true
-	@find . -type d -name ".ruff_cache" -exec rm -rf {} + 2>/dev/null || true
+	@find . -type d -name ".pytest_cache" -exec rm {} + 2>&1 || echo "No pytest cache"
+	@find . -type d -name ".mypy_cache" -exec rm {} + 2>&1 || echo "No mypy cache"
+	@find . -type d -name ".ruff_cache" -exec rm {} + 2>&1 || echo "No ruff cache"
 
-# === Database migrations ===
+# === Database schema ===
 
-migrate: db-check
-	@if [ -z "$(MSG)" ]; then echo "ERROR: MSG is required. Usage: make migrate MSG=\"description\""; exit 1; fi
-	@$(UV) run alembic revision --autogenerate -m "$(MSG)"
-	@$(MAKE) db-check
-	@echo "Migration created. Review it, then commit."
-
-db-check:
-	@HEADS=$$($(UV) run alembic heads 2>/dev/null | grep -c "^" || echo "0"); \
-	if [ "$$HEADS" -gt 1 ]; then \
-		echo "ERROR: Multiple migration heads detected ($$HEADS heads)."; \
-		echo "  Fix: $(UV) run alembic merge heads -m \"merge\""; \
-		exit 1; \
-	fi
-	@BAD=$$(find alembic/versions -name "*.py" ! -name "__*" -exec grep -L "auto generated" {} \; 2>/dev/null); \
-	if [ -n "$$BAD" ]; then \
-		echo "WARNING: Possibly hand-written migrations (missing autogenerate marker):"; \
-		echo "$$BAD"; \
-	fi
+migrate:
+	@$(UV) run python -m app.init_db
 
 # === Internal targets (called by primary targets, not by humans) ===
 
@@ -113,7 +96,7 @@ _ensure-db:
 		echo "Creating database 'dependiq'..."; \
 		$(CREATEDB_CMD) dependiq || (echo "ERROR: Could not create database."; exit 1); \
 	fi
-	@$(UV) run alembic upgrade head || (echo "ERROR: Migrations failed. Run 'make db-reset' to start fresh."; exit 1)
+	@$(UV) run python -m app.init_db || (echo "ERROR: Schema init failed. Run 'make db-reset' to start fresh."; exit 1)
 
 # === Database management ===
 
@@ -126,15 +109,13 @@ db-stop:
 		echo "Could not stop PostgreSQL."
 
 db-reset:
-	@echo "WARNING: This will delete all data and regenerate migrations!"
+	@echo "WARNING: This will delete all data and recreate the schema!"
 	@read -p "Type 'yes' to continue: " confirm; \
 	if [ "$$confirm" = "yes" ]; then \
-		$(DROPDB_CMD) dependiq 2>/dev/null || true; \
-		$(CREATEDB_CMD) dependiq; \
-		rm -f alembic/versions/*.py; \
-		$(UV) run alembic revision --autogenerate -m "baseline schema"; \
-		$(UV) run alembic upgrade head; \
-		echo "Database reset complete with fresh baseline migration."; \
+		$(DROPDB_CMD) dependiq 2>&1 || echo "Note: database did not exist, creating fresh."; \
+		$(CREATEDB_CMD) dependiq || (echo "ERROR: Could not create database."; exit 1); \
+		$(UV) run python -m app.init_db || (echo "ERROR: Schema init failed."; exit 1); \
+		echo "Database reset complete."; \
 	else \
 		echo "Cancelled"; \
 	fi
@@ -144,8 +125,6 @@ db-status:
 	@$(DB_SERVICE_STATUS) 2>/dev/null || echo "  Not running"
 	@echo "Tables:"
 	@$(PSQL_CMD) -d dependiq -c "\dt" 2>/dev/null || echo "  Not accessible"
-	@echo "Migration:"
-	@$(UV) run alembic current 2>/dev/null || echo "  None applied"
 
 # === Render CLI ===
 
