@@ -30,9 +30,9 @@ class TestExistingUserLogin:
         assert password_step.is_displayed(), "Password step should be visible"
 
         email_display = driver.find_element(By.ID, "emailDisplay")
-        assert (
-            email_display.get_attribute("value") == test_email
-        ), f"Email display should show {test_email}"
+        assert email_display.get_attribute("value") == test_email, (
+            f"Email display should show {test_email}"
+        )
 
         password_input = driver.find_element(By.ID, "password")
         password_input.send_keys("TestPassword123!")
@@ -73,9 +73,9 @@ class TestExistingUserLogin:
         time.sleep(1)
         error_msg = PageHelpers.check_for_error(driver)
         if error_msg:
-            assert (
-                "invalid" in error_msg.lower() or "incorrect" in error_msg.lower()
-            ), f"Expected invalid credentials error, got: {error_msg}"
+            assert "invalid" in error_msg.lower() or "incorrect" in error_msg.lower(), (
+                f"Expected invalid credentials error, got: {error_msg}"
+            )
             print("✓ Invalid password correctly rejected")
         else:
             print("⚠ No error message (user may not exist)")

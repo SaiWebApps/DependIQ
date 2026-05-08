@@ -2,7 +2,6 @@
 User profile and preferences API routes
 """
 
-
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import func, select

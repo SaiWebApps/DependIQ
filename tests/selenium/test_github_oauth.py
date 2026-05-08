@@ -21,9 +21,9 @@ class TestGitHubOAuth:
 
         github_btn = driver.find_element(By.CLASS_NAME, "github-btn")
         assert github_btn.is_displayed(), "GitHub OAuth button should be visible"
-        assert (
-            "github" in github_btn.text.lower()
-        ), "GitHub button should mention GitHub"
+        assert "github" in github_btn.text.lower(), (
+            "GitHub button should mention GitHub"
+        )
 
         print("✓ GitHub OAuth button is present and visible")
 
@@ -43,9 +43,9 @@ class TestGitHubOAuth:
         assert new_url != original_url, "Should redirect after clicking GitHub button"
 
         if "github.com" in new_url:
-            assert (
-                "authorize" in new_url or "login" in new_url
-            ), "Should redirect to GitHub authorization page"
+            assert "authorize" in new_url or "login" in new_url, (
+                "Should redirect to GitHub authorization page"
+            )
             print("✓ GitHub OAuth redirect to GitHub.com initiated")
         elif "auth/github" in new_url:
             print("✓ GitHub OAuth endpoint called")
@@ -59,8 +59,8 @@ class TestGitHubOAuth:
         driver.get(f"{base_url}/register")
 
         github_btn = driver.find_element(By.CLASS_NAME, "github-btn")
-        assert (
-            github_btn.is_displayed()
-        ), "GitHub OAuth button should be visible on register page"
+        assert github_btn.is_displayed(), (
+            "GitHub OAuth button should be visible on register page"
+        )
 
         print("✓ GitHub OAuth available on register page")

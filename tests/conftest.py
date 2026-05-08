@@ -29,6 +29,7 @@ def pytest_runtest_makereport(item, call):
             "Skipped tests are treated as failures. Remove the skip marker and fix the test."
         )
 
+
 # Test-only identifiers loaded from environment with fallback for CI
 TEST_WORKOS_USER_ID = os.getenv("TEST_WORKOS_USER_ID", "user_test_ci_001")
 TEST_GITHUB_WORKOS_USER_ID = os.getenv(

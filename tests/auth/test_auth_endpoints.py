@@ -8,12 +8,9 @@ from app.services.workos_auth import SESSION_COOKIE_NAME, STATE_COOKIE_NAME
 
 
 class TestLoginEndpoint:
-
     def test_login_redirects_to_workos(self, test_client):
         with patch("app.services.workos_auth.get_workos_client") as mock_client:
-            mock_client.return_value.user_management.get_authorization_url.return_value = (
-                "https://api.workos.com/user_management/authorize?client_id=test"
-            )
+            mock_client.return_value.user_management.get_authorization_url.return_value = "https://api.workos.com/user_management/authorize?client_id=test"
             with patch("app.services.workos_auth.validate_workos_config"):
                 response = test_client.get("/api/auth/login", follow_redirects=False)
 
@@ -22,9 +19,7 @@ class TestLoginEndpoint:
 
     def test_login_sets_state_cookie(self, test_client):
         with patch("app.services.workos_auth.get_workos_client") as mock_client:
-            mock_client.return_value.user_management.get_authorization_url.return_value = (
-                "https://api.workos.com/authorize"
-            )
+            mock_client.return_value.user_management.get_authorization_url.return_value = "https://api.workos.com/authorize"
             with patch("app.services.workos_auth.validate_workos_config"):
                 response = test_client.get("/api/auth/login", follow_redirects=False)
 
@@ -36,7 +31,6 @@ class TestLoginEndpoint:
 
 
 class TestCallbackEndpoint:
-
     def test_callback_without_code_redirects(self, test_client):
         response = test_client.get("/api/auth/callback", follow_redirects=False)
         assert response.status_code == 302
@@ -57,7 +51,9 @@ class TestCallbackEndpoint:
         assert response.status_code == 302
         assert "error=invalid_state" in response.headers["location"]
 
-    def test_callback_with_valid_state_sets_session_cookie(self, test_client, test_user):
+    def test_callback_with_valid_state_sets_session_cookie(
+        self, test_client, test_user
+    ):
         mock_auth_response = MagicMock()
         mock_auth_response.user.id = test_user.workos_user_id
         mock_auth_response.user.email = test_user.email
@@ -68,7 +64,9 @@ class TestCallbackEndpoint:
         mock_auth_response.authentication_method = None
 
         with (
-            patch("app.api.auth.authenticate_callback", return_value=mock_auth_response),
+            patch(
+                "app.api.auth.authenticate_callback", return_value=mock_auth_response
+            ),
             patch("app.api.auth.seal_session", return_value="sealed_cookie_value"),
         ):
             test_client.cookies.set(STATE_COOKIE_NAME, "valid_state_token")
@@ -91,7 +89,6 @@ class TestCallbackEndpoint:
 
 
 class TestLogoutEndpoint:
-
     def test_logout_clears_cookie(self, test_client):
         response = test_client.post("/api/auth/logout")
         assert response.status_code == 200
@@ -103,9 +100,11 @@ class TestLogoutEndpoint:
 
 
 class TestMeEndpoint:
-
     def test_me_without_cookie_returns_401(self, test_client):
-        with patch("app.services.workos_auth.verify_or_refresh_session", return_value=(None, None)):
+        with patch(
+            "app.services.workos_auth.verify_or_refresh_session",
+            return_value=(None, None),
+        ):
             response = test_client.get("/api/auth/me")
         assert response.status_code == 401
 
@@ -117,9 +116,11 @@ class TestMeEndpoint:
 
 
 class TestPageAuthRedirect:
-
     def test_home_without_cookie_redirects_to_login(self, test_client):
-        with patch("app.services.workos_auth.verify_or_refresh_session", return_value=(None, None)):
+        with patch(
+            "app.services.workos_auth.verify_or_refresh_session",
+            return_value=(None, None),
+        ):
             response = test_client.get("/", follow_redirects=False)
         assert response.status_code == 303
         assert "/login" in response.headers["location"]

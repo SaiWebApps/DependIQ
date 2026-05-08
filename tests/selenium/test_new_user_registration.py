@@ -51,9 +51,9 @@ class TestNewUserAccountCreation:
 
         # Verify we're still on the email step (not password step)
         email_step = driver.find_element(By.ID, "emailStep")
-        assert (
-            email_step.is_displayed()
-        ), "Should remain on email step after magic link sent"
+        assert email_step.is_displayed(), (
+            "Should remain on email step after magic link sent"
+        )
 
         print(f"✓ Non-existent user ({test_email}) correctly triggers magic link flow")
 
@@ -70,9 +70,9 @@ class TestNewUserAccountCreation:
         continue_btn.click()
 
         # Should remain on email step with invalid email
-        assert driver.find_element(
-            By.ID, "emailStep"
-        ).is_displayed(), "Should remain on email step with invalid email"
+        assert driver.find_element(By.ID, "emailStep").is_displayed(), (
+            "Should remain on email step with invalid email"
+        )
 
         print("✓ Email validation working correctly")
 
@@ -174,9 +174,9 @@ class TestNewUserAccountCreation:
 
         # Verify we're logged in by checking for profile/projects page
         current_url = driver.current_url
-        assert (
-            "/profile" in current_url or "/projects" in current_url
-        ), f"Should be redirected to profile or projects after registration, got: {current_url}"
+        assert "/profile" in current_url or "/projects" in current_url, (
+            f"Should be redirected to profile or projects after registration, got: {current_url}"
+        )
 
         print("✓ User automatically logged in after registration")
 
@@ -271,9 +271,9 @@ class TestNewUserAccountCreation:
         time.sleep(2)
         final_url = driver.current_url
 
-        assert (
-            "/profile" in final_url or "/projects" in final_url
-        ), f"Should be redirected to profile or projects after OAuth, got: {final_url}"
+        assert "/profile" in final_url or "/projects" in final_url, (
+            f"Should be redirected to profile or projects after OAuth, got: {final_url}"
+        )
 
         print("✓ GitHub OAuth registration/login completed successfully")
 
@@ -339,8 +339,8 @@ class TestNewUserAccountCreation:
         time.sleep(1)
         error_msg = PageHelpers.check_for_error(driver)
         assert error_msg is not None, "Should show error with invalid temp password"
-        assert (
-            "temp" in error_msg.lower() or "invalid" in error_msg.lower()
-        ), f"Error should mention temp password, got: {error_msg}"
+        assert "temp" in error_msg.lower() or "invalid" in error_msg.lower(), (
+            f"Error should mention temp password, got: {error_msg}"
+        )
 
         print("✓ Invalid temp password correctly rejected")

@@ -49,9 +49,9 @@ class TestColorblindCSS:
 
         modes = ["protanopia", "deuteranopia", "tritanopia"]
         for mode in modes:
-            assert (
-                f'body[data-colorblind="{mode}"]' in css
-            ), f"Colorblind mode '{mode}' not found in CSS"
+            assert f'body[data-colorblind="{mode}"]' in css, (
+                f"Colorblind mode '{mode}' not found in CSS"
+            )
 
     def test_colorblind_overrides_status_colors(self):
         """Colorblind modes should override status colors"""
@@ -75,9 +75,9 @@ class TestColorblindCSS:
 
             mode_css = match.group(1)
             for color in required_overrides:
-                assert (
-                    color in mode_css
-                ), f"Color '{color}' not overridden in {mode} mode"
+                assert color in mode_css, (
+                    f"Color '{color}' not overridden in {mode} mode"
+                )
 
     def test_colorblind_colors_avoid_problematic_combinations(self):
         """Colorblind modes should not use red-green combinations"""
@@ -104,9 +104,9 @@ class TestFontSizeCSS:
 
         sizes = ["large", "xlarge"]
         for size in sizes:
-            assert (
-                f'body[data-font-size="{size}"]' in css
-            ), f"Font size '{size}' not found in CSS"
+            assert f'body[data-font-size="{size}"]' in css, (
+                f"Font size '{size}' not found in CSS"
+            )
 
     def test_font_size_increases_base_size(self):
         """Font size modes should increase base font size"""
@@ -201,6 +201,6 @@ class TestAccessibilityCSSStructure:
         accessibility_pos = css.find("data-high-contrast")
 
         if dracula_pos >= 0 and accessibility_pos >= 0:
-            assert (
-                accessibility_pos > dracula_pos
-            ), "Accessibility CSS should come after theme definitions"
+            assert accessibility_pos > dracula_pos, (
+                "Accessibility CSS should come after theme definitions"
+            )

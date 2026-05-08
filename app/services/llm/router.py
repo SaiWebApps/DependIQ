@@ -22,6 +22,11 @@ class TaskType(Enum):
     SECURITY_ANALYSIS = "security_analysis"
     MIGRATION_PLANNING = "migration_planning"
     CODE_UPDATE = "code_update"
+    # New task types for architecture intelligence
+    ARCHITECTURE_MAP = "architecture_map"
+    PROJECT_SUMMARY = "project_summary"
+    CHAIN_REACTION = "chain_reaction"
+    RELATIONSHIP_DETECT = "relationship_detect"
 
 
 class RoutingMode(Enum):
@@ -85,6 +90,26 @@ DEFAULT_ROUTES: dict[TaskType, list[str]] = {
         "anthropic/claude-sonnet-4-20250514",
         "openai/gpt-4o",
     ],
+    TaskType.ARCHITECTURE_MAP: [
+        "anthropic/claude-sonnet-4-20250514",
+        "openai/gpt-4o",
+        "anthropic/claude-haiku-4-5-20251001",
+    ],
+    TaskType.PROJECT_SUMMARY: [
+        "anthropic/claude-haiku-4-5-20251001",
+        "openai/gpt-4o-mini",
+        "ollama/qwen2.5-coder:7b",
+    ],
+    TaskType.CHAIN_REACTION: [
+        "anthropic/claude-opus-4-20250514",
+        "anthropic/claude-sonnet-4-20250514",
+        "openai/gpt-4o",
+    ],
+    TaskType.RELATIONSHIP_DETECT: [
+        "anthropic/claude-sonnet-4-20250514",
+        "openai/gpt-4o",
+        "anthropic/claude-haiku-4-5-20251001",
+    ],
 }
 
 LOCAL_ONLY_ROUTES: dict[TaskType, list[str]] = {
@@ -107,6 +132,22 @@ LOCAL_ONLY_ROUTES: dict[TaskType, list[str]] = {
         "ollama/qwen2.5-coder:14b",
     ],
     TaskType.CODE_UPDATE: ["ollama/deepseek-coder-v2:16b", "ollama/qwen2.5-coder:14b"],
+    TaskType.ARCHITECTURE_MAP: [
+        "ollama/deepseek-coder-v2:16b",
+        "ollama/qwen2.5-coder:14b",
+    ],
+    TaskType.PROJECT_SUMMARY: [
+        "ollama/qwen2.5-coder:7b",
+        "ollama/llama3.1:8b",
+    ],
+    TaskType.CHAIN_REACTION: [
+        "ollama/deepseek-coder-v2:16b",
+        "ollama/qwen2.5-coder:14b",
+    ],
+    TaskType.RELATIONSHIP_DETECT: [
+        "ollama/deepseek-coder-v2:16b",
+        "ollama/qwen2.5-coder:14b",
+    ],
 }
 
 COST_ROUTES: dict[TaskType, list[str]] = {
@@ -135,6 +176,22 @@ COST_ROUTES: dict[TaskType, list[str]] = {
         "openai/gpt-4o",
     ],
     TaskType.CODE_UPDATE: [
+        "anthropic/claude-haiku-4-5-20251001",
+        "anthropic/claude-sonnet-4-20250514",
+    ],
+    TaskType.ARCHITECTURE_MAP: [
+        "anthropic/claude-haiku-4-5-20251001",
+        "anthropic/claude-sonnet-4-20250514",
+    ],
+    TaskType.PROJECT_SUMMARY: [
+        "ollama/qwen2.5-coder:7b",
+        "anthropic/claude-haiku-4-5-20251001",
+    ],
+    TaskType.CHAIN_REACTION: [
+        "anthropic/claude-sonnet-4-20250514",
+        "anthropic/claude-opus-4-20250514",
+    ],
+    TaskType.RELATIONSHIP_DETECT: [
         "anthropic/claude-haiku-4-5-20251001",
         "anthropic/claude-sonnet-4-20250514",
     ],
@@ -194,13 +251,25 @@ class ModelRouter:
         }
 
     def _max_tokens_for_task(self, task: TaskType) -> int:
-        heavy_tasks = {TaskType.CODE_UPDATE, TaskType.MIGRATION_PLANNING}
-        medium_tasks = {TaskType.SECURITY_ANALYSIS, TaskType.VERSION_RESEARCH}
+        heavy_tasks = {
+            TaskType.CODE_UPDATE,
+            TaskType.MIGRATION_PLANNING,
+            TaskType.CHAIN_REACTION,
+            TaskType.ARCHITECTURE_MAP,
+        }
+        medium_tasks = {
+            TaskType.SECURITY_ANALYSIS,
+            TaskType.VERSION_RESEARCH,
+            TaskType.RELATIONSHIP_DETECT,
+        }
+        light_tasks = {TaskType.PROJECT_SUMMARY}
 
         if task in heavy_tasks:
             return 8192
         elif task in medium_tasks:
             return 4096
+        elif task in light_tasks:
+            return 2048
         return 2048
 
     def available_providers(self) -> list[str]:

@@ -51,7 +51,9 @@ def make_access_token(rsa_keypair):
             claims["org_id"] = org_id
         if extra_claims:
             claims.update(extra_claims)
-        return pyjwt.encode(claims, private_key, algorithm="RS256", headers={"kid": "test-key-1"})
+        return pyjwt.encode(
+            claims, private_key, algorithm="RS256", headers={"kid": "test-key-1"}
+        )
 
     return _make
 
