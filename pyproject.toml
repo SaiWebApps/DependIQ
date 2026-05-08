@@ -63,6 +63,7 @@ exclude = [
     "build",
     "dist",
     ".pytest_cache",
+    "alembic/versions",
 ]
 
 [tool.ruff.lint]

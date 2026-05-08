@@ -1,27 +1,58 @@
 """
 WorkOS AuthKit authentication service.
 
-Replaces custom JWT/OAuth logic with WorkOS-managed authentication.
+Sealed sessions: Fernet-encrypted cookies containing access_token,
+refresh_token, and user data. Verification via JWKS. Automatic
+refresh when the JWT expires.
 """
 
+import logging
+import secrets
 from datetime import datetime
 
 from fastapi import HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from workos import WorkOSClient
+from workos.session import (
+    AuthenticateWithSessionCookieFailureReason,
+    AuthenticateWithSessionCookieSuccessResponse,
+    RefreshWithSessionCookieSuccessResponse,
+    seal_session_from_auth_response,
+)
 
 from ..config import Config
 from ..models import User
 
-# Initialize WorkOS client
+logger = logging.getLogger(__name__)
+
+SESSION_COOKIE_NAME = "diq_session"
+STATE_COOKIE_NAME = "diq_oauth_state"
+
 _workos_client: WorkOSClient | None = None
+
+
+def validate_workos_config() -> None:
+    """Fail fast if required WorkOS config is missing."""
+    missing = []
+    if not Config.WORKOS_API_KEY:
+        missing.append("WORKOS_API_KEY")
+    if not Config.WORKOS_CLIENT_ID:
+        missing.append("WORKOS_CLIENT_ID")
+    if not Config.WORKOS_COOKIE_PASSWORD:
+        missing.append("WORKOS_COOKIE_PASSWORD")
+    if missing:
+        raise RuntimeError(
+            f"Missing required WorkOS config: {', '.join(missing)}. "
+            "Set these environment variables before starting the app."
+        )
 
 
 def get_workos_client() -> WorkOSClient:
     """Get or create the WorkOS client singleton."""
     global _workos_client
     if _workos_client is None:
+        validate_workos_config()
         _workos_client = WorkOSClient(
             api_key=Config.WORKOS_API_KEY,
             client_id=Config.WORKOS_CLIENT_ID,
@@ -29,81 +60,144 @@ def get_workos_client() -> WorkOSClient:
     return _workos_client
 
 
+def generate_state() -> str:
+    """Generate a CSRF state token for OAuth flow."""
+    return secrets.token_urlsafe(32)
+
+
 def get_authorization_url(
     provider: str | None = None,
-    redirect_uri: str | None = None,
     provider_scopes: list[str] | None = None,
-) -> str:
+) -> tuple[str, str]:
     """
-    Generate the WorkOS AuthKit authorization URL.
-
-    Args:
-        provider: OAuth provider (e.g., 'GitHubOAuth', 'GoogleOAuth')
-        redirect_uri: Callback URL (defaults to Config.WORKOS_REDIRECT_URI)
-        provider_scopes: Additional scopes for the provider (e.g., ['repo'])
+    Generate the WorkOS authorization URL and a CSRF state token.
 
     Returns:
-        Authorization URL string
+        Tuple of (authorization_url, state_token)
     """
     client = get_workos_client()
-    uri = redirect_uri or Config.WORKOS_REDIRECT_URI
+    state = generate_state()
 
-    kwargs = {
-        "redirect_uri": uri,
+    kwargs: dict = {
+        "redirect_uri": Config.WORKOS_REDIRECT_URI,
+        "state": state,
+        "provider": provider or "authkit",
     }
-
-    if provider:
-        kwargs["provider"] = provider
 
     if provider_scopes:
         kwargs["provider_scopes"] = provider_scopes
 
-    authorization_url = client.user_management.get_authorization_url(**kwargs)
-    return authorization_url
+    url = client.user_management.get_authorization_url(**kwargs)
+    return url, state
 
 
 def authenticate_callback(code: str):
-    """
-    Exchange an authorization code for session tokens and user info.
+    """Exchange an authorization code for tokens and user info."""
+    client = get_workos_client()
+    return client.user_management.authenticate_with_code(code=code)
 
-    Args:
-        code: The authorization code from WorkOS callback
+
+def seal_session(auth_response) -> str:
+    """Fernet-encrypt access_token + refresh_token + user into a cookie value."""
+    return seal_session_from_auth_response(
+        access_token=auth_response.access_token,
+        refresh_token=auth_response.refresh_token,
+        user=auth_response.user.to_dict(),
+        impersonator=(
+            auth_response.impersonator.to_dict()
+            if auth_response.impersonator
+            else None
+        ),
+        cookie_password=Config.WORKOS_COOKIE_PASSWORD,
+    )
+
+
+def verify_or_refresh_session(
+    sealed_cookie: str,
+) -> tuple[AuthenticateWithSessionCookieSuccessResponse | RefreshWithSessionCookieSuccessResponse | None, str | None]:
+    """
+    Verify a sealed session. If the JWT is expired, attempt refresh.
 
     Returns:
-        Authentication response with user, access_token, refresh_token, oauth_tokens
+        (session_result, new_sealed_cookie_or_None)
+        - If valid: (result, None)
+        - If refreshed: (result, new_sealed_session_to_set_as_cookie)
+        - If dead: (None, None)
     """
     client = get_workos_client()
-    response = client.user_management.authenticate_with_code(
-        code=code,
+    session = client.user_management.load_sealed_session(
+        session_data=sealed_cookie,
+        cookie_password=Config.WORKOS_COOKIE_PASSWORD,
     )
-    return response
+
+    result = session.authenticate()
+
+    if result.authenticated:
+        return (result, None)
+
+    if result.reason == AuthenticateWithSessionCookieFailureReason.INVALID_JWT:
+        try:
+            refresh_result = session.refresh()
+            if refresh_result.authenticated:
+                return (refresh_result, refresh_result.sealed_session)
+        except Exception as e:
+            logger.debug("Session refresh failed: %s", e)
+
+    return (None, None)
 
 
-def verify_session(token: str) -> dict | None:
+async def get_current_user_from_cookie(
+    request: Request, db: AsyncSession
+) -> User | None:
     """
-    Verify a WorkOS session JWT.
-
-    Args:
-        token: The session JWT (access_token from WorkOS)
-
-    Returns:
-        Decoded payload dict or None if invalid
+    Get the current user from the sealed session cookie.
+    Handles refresh transparently (stores new cookie in request.state).
+    Returns None if not authenticated.
     """
-    import jwt as pyjwt
-    from jwt.exceptions import InvalidTokenError
+    sealed_cookie = request.cookies.get(SESSION_COOKIE_NAME)
+    if not sealed_cookie:
+        return None
 
     try:
-        # WorkOS JWTs are verified by decoding the claims.
-        # The token lifetime is managed by WorkOS; we trust it if decodable.
-        # In production with JWKS verification, use workos.user_management APIs.
-        payload = pyjwt.decode(
-            token,
-            options={"verify_signature": False},
-            algorithms=["RS256"],
-        )
-        return payload
-    except InvalidTokenError:
+        session_result, new_cookie = verify_or_refresh_session(sealed_cookie)
+    except Exception as e:
+        logger.debug("Session verification error: %s", e)
         return None
+
+    if not session_result:
+        return None
+
+    if new_cookie:
+        request.state.refreshed_session = new_cookie
+
+    user_data = session_result.user
+    if not user_data:
+        return None
+
+    workos_user_id = user_data.get("id")
+    if not workos_user_id:
+        return None
+
+    result = await db.execute(
+        select(User).where(User.workos_user_id == workos_user_id)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user or not user.is_active:
+        return None
+
+    return user
+
+
+async def get_current_user(request: Request, db: AsyncSession) -> User:
+    """Get authenticated user or raise 401."""
+    user = await get_current_user_from_cookie(request, db)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+        )
+    return user
 
 
 async def get_or_create_user(
@@ -114,38 +208,21 @@ async def get_or_create_user(
     gitlab_access_token: str | None = None,
     bitbucket_access_token: str | None = None,
 ) -> User:
-    """
-    Find existing user by WorkOS ID or email, or create a new one.
-
-    Args:
-        db: Database session
-        workos_user_id: The WorkOS user ID
-        email: User's email address
-        github_access_token: GitHub OAuth token (if provider was GitHub)
-        gitlab_access_token: GitLab OAuth token
-        bitbucket_access_token: Bitbucket OAuth token
-
-    Returns:
-        User model instance
-    """
-    # First try to find by workos_user_id
+    """Find existing user by WorkOS ID or email, or create a new one."""
     result = await db.execute(
         select(User).where(User.workos_user_id == workos_user_id)
     )
     user = result.scalar_one_or_none()
 
     if not user:
-        # Try to find by email (for migration from old auth)
         result = await db.execute(
             select(User).where(User.email == email.lower())
         )
         user = result.scalar_one_or_none()
 
         if user:
-            # Link existing user to WorkOS
             user.workos_user_id = workos_user_id
         else:
-            # Create new user
             user = User(
                 email=email.lower(),
                 workos_user_id=workos_user_id,
@@ -154,7 +231,6 @@ async def get_or_create_user(
             )
             db.add(user)
 
-    # Update OAuth tokens if provided
     if github_access_token is not None:
         user.github_access_token = github_access_token
     if gitlab_access_token is not None:
@@ -163,58 +239,5 @@ async def get_or_create_user(
         user.bitbucket_access_token = bitbucket_access_token
 
     user.last_login_at = datetime.utcnow()
-
     await db.flush()
-    return user
-
-
-async def get_current_user(request: Request, db: AsyncSession) -> User:
-    """
-    FastAPI dependency: get the current authenticated user from session cookie.
-
-    Raises HTTPException 401 if not authenticated.
-    """
-    user = await get_current_user_from_cookie(request, db)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return user
-
-
-async def get_current_user_from_cookie(
-    request: Request, db: AsyncSession
-) -> User | None:
-    """
-    Get the current user from the session cookie.
-
-    Returns None if not authenticated (for page routes that redirect).
-    """
-    # Read session token from cookie
-    token = request.cookies.get("dependiq_session")
-
-    if not token:
-        return None
-
-    # Verify the session JWT
-    payload = verify_session(token)
-    if not payload:
-        return None
-
-    # Extract user info from the JWT
-    sub = payload.get("sub")
-    if not sub:
-        return None
-
-    # Look up user by workos_user_id (the 'sub' claim)
-    result = await db.execute(
-        select(User).where(User.workos_user_id == sub)
-    )
-    user = result.scalar_one_or_none()
-
-    if not user or not user.is_active:
-        return None
-
     return user

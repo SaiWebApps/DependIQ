@@ -16,16 +16,29 @@ from app.database import Base, get_db
 from app.models import User
 from main import app
 
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    """Treat skipped tests as failures. No test should be skipped."""
+    outcome = yield
+    report = outcome.get_result()
+    if report.skipped:
+        report.outcome = "failed"
+        report.longrepr = (
+            f"FAILED: {item.nodeid} was skipped. "
+            "Skipped tests are treated as failures. Remove the skip marker and fix the test."
+        )
+
 # Test-only identifiers loaded from environment with fallback for CI
-TEST_WORKOS_USER_ID = os.getenv("TEST_WORKOS_USER_ID", "user_test_placeholder")
+TEST_WORKOS_USER_ID = os.getenv("TEST_WORKOS_USER_ID", "user_test_ci_001")
 TEST_GITHUB_WORKOS_USER_ID = os.getenv(
-    "TEST_GITHUB_WORKOS_USER_ID", "user_github_placeholder"
+    "TEST_GITHUB_WORKOS_USER_ID", "user_github_ci_001"
 )
 TEST_UNVERIFIED_WORKOS_USER_ID = os.getenv(
-    "TEST_UNVERIFIED_WORKOS_USER_ID", "user_unverified_placeholder"
+    "TEST_UNVERIFIED_WORKOS_USER_ID", "user_unverified_ci_001"
 )
-TEST_GITHUB_TOKEN = os.getenv("TEST_GITHUB_TOKEN", "ghp_placeholder_for_testing")
-TEST_SESSION_TOKEN = os.getenv("TEST_SESSION_TOKEN", "session_placeholder_for_testing")
+TEST_GITHUB_TOKEN = os.getenv("TEST_GITHUB_TOKEN", "ghp_test_token_for_ci")
+TEST_SESSION_TOKEN = os.getenv("TEST_SESSION_TOKEN", "session_token_for_ci")
 
 
 # Test database URL - use unique shared in-memory SQLite per test function
@@ -157,14 +170,22 @@ def auth_headers(test_user, _mock_verify_session):
     The middleware now reads from cookies, so we pass the cookie header.
     The _mock_verify_session fixture patches verify_session globally.
     """
-    return {"cookie": f"dependiq_session={TEST_SESSION_TOKEN}"}
+    return {"cookie": f"diq_session={TEST_SESSION_TOKEN}"}
 
 
 @pytest.fixture
 def _mock_verify_session(test_user):
-    """Patch verify_session to return the test user's WorkOS ID."""
+    """Patch verify_or_refresh_session to return a successful result."""
     from unittest.mock import patch
 
-    with patch("app.services.workos_auth.verify_session") as mock_v:
-        mock_v.return_value = {"sub": TEST_WORKOS_USER_ID}
+    from workos.session import AuthenticateWithSessionCookieSuccessResponse
+
+    mock_result = AuthenticateWithSessionCookieSuccessResponse(
+        authenticated=True,
+        session_id="sess_test_ci_001",
+        user={"id": TEST_WORKOS_USER_ID, "email": "test@example.com"},
+    )
+
+    with patch("app.services.workos_auth.verify_or_refresh_session") as mock_v:
+        mock_v.return_value = (mock_result, None)
         yield mock_v

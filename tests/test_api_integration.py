@@ -87,7 +87,7 @@ class TestGitHubAPI:
     def test_github_login_redirect(self, test_client):
         """Test GitHub OAuth redirect via WorkOS"""
         with patch("app.api.auth.get_authorization_url") as mock_url:
-            mock_url.return_value = "https://authkit.workos.com/auth"
+            mock_url.return_value = ("https://authkit.workos.com/auth", "state_123")
             response = test_client.get(
                 "/api/auth/login?provider=GitHubOAuth",
                 follow_redirects=False,
@@ -226,7 +226,7 @@ class TestAuthAPI:
     def test_login_endpoint_exists(self, test_client):
         """Test that login endpoint redirects"""
         with patch("app.api.auth.get_authorization_url") as mock_url:
-            mock_url.return_value = "https://authkit.workos.com/auth"
+            mock_url.return_value = ("https://authkit.workos.com/auth", "state_abc")
             response = test_client.get("/api/auth/login", follow_redirects=False)
         assert response.status_code == 302
 
@@ -234,7 +234,7 @@ class TestAuthAPI:
         """Test logout clears session"""
         response = test_client.post("/api/auth/logout")
         assert response.status_code == 200
-        assert "dependiq_session" in response.headers.get("set-cookie", "")
+        assert "diq_session" in response.headers.get("set-cookie", "")
 
     def test_me_requires_auth(self, test_client):
         """Test /api/auth/me requires authentication"""
@@ -277,21 +277,13 @@ class TestAPICORS:
 class TestAPIPerformance:
     """Test API performance characteristics"""
 
-    @pytest.mark.skip(
-        reason="Concurrent operations not supported with SQLite in-memory test database"
-    )
-    def test_multiple_concurrent_profile_requests(self, test_client, auth_headers):
-        """Test handling multiple concurrent requests"""
-        import concurrent.futures
+    def test_multiple_sequential_profile_requests(self, test_client, auth_headers):
+        """Test handling multiple sequential requests to profile endpoint"""
+        results = [
+            test_client.get("/api/user/profile", headers=auth_headers)
+            for _ in range(5)
+        ]
 
-        def make_request():
-            return test_client.get("/api/user/profile", headers=auth_headers)
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            futures = [executor.submit(make_request) for _ in range(5)]
-            results = [f.result() for f in futures]
-
-        # All requests should succeed
         for response in results:
             assert response.status_code == status.HTTP_200_OK
 

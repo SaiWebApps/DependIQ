@@ -46,6 +46,7 @@ class Config:
     WORKOS_REDIRECT_URI = os.getenv(
         "WORKOS_REDIRECT_URI", "http://localhost:8000/api/auth/callback"
     )
+    WORKOS_COOKIE_PASSWORD = os.getenv("WORKOS_COOKIE_PASSWORD", "")
 
     # Application URL
     APP_URL = os.getenv("APP_URL", "http://localhost:8000")

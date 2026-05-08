@@ -8,28 +8,45 @@ import os
 from unittest.mock import MagicMock, patch
 
 from fastapi import status
+from workos.session import AuthenticateWithSessionCookieSuccessResponse
 
+from app.services.workos_auth import SESSION_COOKIE_NAME, STATE_COOKIE_NAME
 from tests.conftest import TEST_SESSION_TOKEN, TEST_WORKOS_USER_ID
 
 # Test values sourced from env (see conftest.py)
-MOCK_JWT = os.getenv("TEST_SESSION_TOKEN", "placeholder")
 MOCK_GH = os.getenv("TEST_GITHUB_TOKEN", "placeholder")
+MOCK_REFRESH = os.getenv("TEST_REFRESH_TOKEN", "placeholder")
 
 
-def _make_workos_response(user_id, email, jwt_val=None, gh_val=None, method=None):
+def _make_workos_response(user_id, email, gh_val=None, method=None):
     """Build a mock WorkOS authenticate_with_code response."""
     mock_user = MagicMock()
     mock_user.id = user_id
     mock_user.email = email
+    mock_user.to_dict.return_value = {
+        "id": user_id,
+        "email": email,
+        "object": "user",
+        "first_name": None,
+        "last_name": None,
+        "profile_picture_url": None,
+        "email_verified": True,
+        "external_id": None,
+        "last_sign_in_at": None,
+        "created_at": "2024-01-01T00:00:00Z",
+        "updated_at": "2024-01-01T00:00:00Z",
+    }
 
     mock_response = MagicMock()
     mock_response.user = mock_user
-    mock_response.configure_mock(**{"access_token": jwt_val or MOCK_JWT})
+    mock_response.access_token = TEST_SESSION_TOKEN
+    mock_response.refresh_token = MOCK_REFRESH
     mock_response.authentication_method = method
+    mock_response.impersonator = None
 
     if gh_val:
         mock_oauth_tokens = MagicMock()
-        mock_oauth_tokens.configure_mock(**{"access_token": gh_val})
+        mock_oauth_tokens.access_token = gh_val
         mock_response.oauth_tokens = mock_oauth_tokens
     else:
         mock_response.oauth_tokens = None
@@ -54,26 +71,30 @@ class TestAuthCallback:
         assert response.status_code == 302
         assert "/login?error=auth_denied" in response.headers["location"]
 
+    @patch("app.api.auth.seal_session")
     @patch("app.api.auth.authenticate_callback")
     def test_callback_with_valid_code_sets_cookie(
-        self, mock_auth, test_client, test_db_session
+        self, mock_auth, mock_seal, test_client, test_db_session
     ):
         """Valid code should create user, set cookie, redirect to /."""
         mock_auth.return_value = _make_workos_response(
             "workos_new_id", "newuser@example.com"
         )
+        mock_seal.return_value = "sealed_test_value"
 
+        test_client.cookies.set(STATE_COOKIE_NAME, "test_state_token")
         response = test_client.get(
-            "/api/auth/callback?code=valid", follow_redirects=False
+            "/api/auth/callback?code=valid&state=test_state_token", follow_redirects=False
         )
 
         assert response.status_code == 302
         assert response.headers["location"] == "/"
-        assert "dependiq_session" in response.headers.get("set-cookie", "")
+        assert SESSION_COOKIE_NAME in response.headers.get("set-cookie", "")
 
+    @patch("app.api.auth.seal_session")
     @patch("app.api.auth.authenticate_callback")
     def test_callback_stores_github_provider_info(
-        self, mock_auth, test_client, test_db_session
+        self, mock_auth, mock_seal, test_client, test_db_session
     ):
         """Callback with GitHub OAuth tokens should store the token on user."""
         mock_auth.return_value = _make_workos_response(
@@ -82,6 +103,7 @@ class TestAuthCallback:
             gh_val=MOCK_GH,
             method="GitHubOAuth",
         )
+        mock_seal.return_value = "sealed_placeholder"
 
         response = test_client.get(
             "/api/auth/callback?code=ghcode", follow_redirects=False
@@ -96,8 +118,9 @@ class TestAuthCallback:
         """Invalid code should redirect to login with error."""
         mock_auth.side_effect = Exception("Invalid code")
 
+        test_client.cookies.set(STATE_COOKIE_NAME, "test_state")
         response = test_client.get(
-            "/api/auth/callback?code=bad", follow_redirects=False
+            "/api/auth/callback?code=bad&state=test_state", follow_redirects=False
         )
 
         assert response.status_code == 302
@@ -117,7 +140,7 @@ class TestLogout:
 
         # Check cookie deletion header
         set_cookie = response.headers.get("set-cookie", "")
-        assert "dependiq_session" in set_cookie
+        assert SESSION_COOKIE_NAME in set_cookie
 
 
 class TestProtectedRoutes:
@@ -128,16 +151,20 @@ class TestProtectedRoutes:
         response = test_client.get("/api/auth/me")
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    @patch("app.services.workos_auth.verify_session")
+    @patch("app.services.workos_auth.verify_or_refresh_session")
     def test_api_me_with_valid_cookie_returns_user(
         self, mock_verify, test_client, test_user
     ):
         """GET /api/auth/me with valid session should return user info."""
-        mock_verify.return_value = {"sub": TEST_WORKOS_USER_ID}
+        mock_verify.return_value = (AuthenticateWithSessionCookieSuccessResponse(
+            authenticated=True,
+            session_id="sess_test_me",
+            user={"id": TEST_WORKOS_USER_ID, "email": "test@example.com"},
+        ), None)
 
         response = test_client.get(
             "/api/auth/me",
-            cookies={"dependiq_session": TEST_SESSION_TOKEN},
+            cookies={SESSION_COOKIE_NAME: TEST_SESSION_TOKEN},
         )
 
         assert response.status_code == 200
@@ -150,16 +177,20 @@ class TestProtectedRoutes:
         assert response.status_code == 303
         assert "/login" in response.headers["location"]
 
-    @patch("app.services.workos_auth.verify_session")
+    @patch("app.services.workos_auth.verify_or_refresh_session")
     def test_home_with_valid_cookie_returns_200(
         self, mock_verify, test_client, test_user
     ):
         """GET / with valid session should return 200."""
-        mock_verify.return_value = {"sub": TEST_WORKOS_USER_ID}
+        mock_verify.return_value = (AuthenticateWithSessionCookieSuccessResponse(
+            authenticated=True,
+            session_id="sess_test_home",
+            user={"id": TEST_WORKOS_USER_ID, "email": "test@example.com"},
+        ), None)
 
         response = test_client.get(
             "/",
-            cookies={"dependiq_session": TEST_SESSION_TOKEN},
+            cookies={SESSION_COOKIE_NAME: TEST_SESSION_TOKEN},
         )
 
         assert response.status_code == 200
@@ -171,7 +202,7 @@ class TestLoginRedirect:
     @patch("app.api.auth.get_authorization_url")
     def test_login_redirects_to_workos(self, mock_url, test_client):
         """GET /api/auth/login should redirect to WorkOS."""
-        mock_url.return_value = "https://authkit.workos.com/authorize?id=test"
+        mock_url.return_value = ("https://authkit.workos.com/authorize?id=test", "state_abc")
 
         response = test_client.get("/api/auth/login", follow_redirects=False)
 
@@ -181,7 +212,7 @@ class TestLoginRedirect:
     @patch("app.api.auth.get_authorization_url")
     def test_login_with_provider_passes_provider(self, mock_url, test_client):
         """GET /api/auth/login?provider=GitHubOAuth should pass provider."""
-        mock_url.return_value = "https://authkit.workos.com/authorize?p=github"
+        mock_url.return_value = ("https://authkit.workos.com/authorize?p=github", "state_xyz")
 
         response = test_client.get(
             "/api/auth/login?provider=GitHubOAuth&scope=repo",

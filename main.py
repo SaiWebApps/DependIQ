@@ -13,7 +13,7 @@ from app.api import create_router
 from app.config import Config
 from app.database import get_db
 from app.middleware import register_error_handlers
-from app.middleware.page_auth import get_current_user_from_cookie
+from app.services.workos_auth import SESSION_COOKIE_NAME, get_current_user_from_cookie
 
 # Create FastAPI application
 app = FastAPI(
@@ -24,6 +24,26 @@ app = FastAPI(
 
 # Register error handlers for better user feedback
 register_error_handlers(app)
+
+
+@app.middleware("http")
+async def refresh_session_middleware(request: Request, call_next):
+    """Propagate refreshed session cookie to the response."""
+    request.state.refreshed_session = None
+    response = await call_next(request)
+    new_cookie = request.state.refreshed_session
+    if new_cookie:
+        is_production = Config.ENVIRONMENT != "development"
+        response.set_cookie(
+            key=SESSION_COOKIE_NAME,
+            value=new_cookie,
+            max_age=400 * 24 * 60 * 60,
+            httponly=True,
+            secure=is_production,
+            samesite="lax",
+            path="/",
+        )
+    return response
 
 # Mount static files and templates
 app.mount("/static", StaticFiles(directory="static"), name="static")

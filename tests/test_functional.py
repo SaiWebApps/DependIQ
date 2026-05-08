@@ -12,20 +12,27 @@ from unittest.mock import patch
 import pytest
 from fastapi import status
 
+from app.services.workos_auth import SESSION_COOKIE_NAME
 from tests.conftest import TEST_SESSION_TOKEN, TEST_WORKOS_USER_ID
 
 
 @pytest.fixture
 def auth_cookies():
     """Session cookie for authenticated requests."""
-    return {"dependiq_session": TEST_SESSION_TOKEN}
+    return {SESSION_COOKIE_NAME: TEST_SESSION_TOKEN}
 
 
 @pytest.fixture
 def mock_session_verification(test_user):
     """Mock session verification for functional tests that need it."""
-    with patch("app.services.workos_auth.verify_session") as mock_verify:
-        mock_verify.return_value = {"sub": TEST_WORKOS_USER_ID}
+    from workos.session import AuthenticateWithSessionCookieSuccessResponse
+
+    with patch("app.services.workos_auth.verify_or_refresh_session") as mock_verify:
+        mock_verify.return_value = (AuthenticateWithSessionCookieSuccessResponse(
+            authenticated=True,
+            session_id="sess_func_test",
+            user={"id": TEST_WORKOS_USER_ID, "email": "test@example.com"},
+        ), None)
         yield mock_verify
 
 
@@ -91,7 +98,7 @@ class TestGitHubIntegrationWorkflow:
     def test_github_login_redirects(self, test_client):
         """Test that /api/auth/login?provider=GitHubOAuth redirects."""
         with patch("app.api.auth.get_authorization_url") as mock_url:
-            mock_url.return_value = "https://authkit.workos.com/authorize"
+            mock_url.return_value = ("https://authkit.workos.com/authorize", "state_gh")
 
             response = test_client.get(
                 "/api/auth/login?provider=GitHubOAuth",
@@ -106,10 +113,16 @@ class TestGitHubIntegrationWorkflow:
     ):
         """Test selecting GitHub repository for analysis."""
         # Override the autouse mock to use the github user's workos_id
+        from workos.session import AuthenticateWithSessionCookieSuccessResponse
+
         from tests.conftest import TEST_GITHUB_WORKOS_USER_ID
 
-        with patch("app.services.workos_auth.verify_session") as mock_v:
-            mock_v.return_value = {"sub": TEST_GITHUB_WORKOS_USER_ID}
+        with patch("app.services.workos_auth.verify_or_refresh_session") as mock_v:
+            mock_v.return_value = (AuthenticateWithSessionCookieSuccessResponse(
+                authenticated=True,
+                session_id="sess_func_github",
+                user={"id": TEST_GITHUB_WORKOS_USER_ID, "email": "github@example.com"},
+            ), None)
 
             with patch(
                 "app.api.projects.get_github_repositories"

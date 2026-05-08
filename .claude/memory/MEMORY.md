@@ -1,0 +1,10 @@
+- [Never Hand-Write Migrations](never_handwrite_migrations.md) — Alembic generates revision IDs; inventing them breaks the chain
+- [WorkOS Needs AuthKit Sign-In Endpoint](workos_authkit_signin_endpoint.md) — AuthKit hosted UI requires matching sign-in endpoint; direct OAuth (provider=GitHubOAuth) bypasses it
+- [Alembic env.py Must Import Models](alembic_env_must_import_models.md) — autogenerate produces empty migrations if model classes aren't imported
+- [Makefile Targets Must Fail Loudly](makefile_fail_loudly.md) — Never use || true or 2>/dev/null on critical path; silent failures waste hours
+- [WorkOS Direct OAuth Works](workos_direct_oauth_works.md) — provider=GitHubOAuth goes directly to GitHub, no AuthKit UI needed
+- [Lint Is Not Verification](lint_is_not_verification.md) — Only make test proves correctness; lint proves nothing about behavior
+- [Session Cookie Password Is Fernet Key](session_cookie_fernet_key.md) — WORKOS_COOKIE_PASSWORD must be 32-byte base64 from Fernet.generate_key()
+- [Session Refresh Required](session_refresh_required.md) — Without calling session.refresh() on expired JWT, users get logged out in ~5 min
+- [Don't Blame Config Without Proof](dont_blame_config_without_proof.md) — Verify claims against the actual API/system before blaming external configuration
+- [Test The Real Flow First](test_real_flow_first.md) — Before writing code, verify the provider URL works in a browser; catches config issues immediately
