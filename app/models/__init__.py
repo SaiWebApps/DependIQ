@@ -10,6 +10,8 @@ from .project_history import ProjectHistory
 from .project_library import ProjectLibrary
 from .user import User
 from .user_preference import UserPreference
+from .workspace import Workspace
+from .workspace_member import WorkspaceMember
 
 __all__ = [
     "ArtifactExclusionConfig",
@@ -23,4 +25,6 @@ __all__ = [
     "ProjectType",
     "User",
     "UserPreference",
+    "Workspace",
+    "WorkspaceMember",
 ]

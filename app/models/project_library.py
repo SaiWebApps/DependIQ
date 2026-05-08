@@ -15,6 +15,7 @@ from ..database import Base
 if TYPE_CHECKING:
     from .job import Job
     from .user import User
+    from .workspace import Workspace
 
 
 class ProjectLibrary(Base):
@@ -36,6 +37,14 @@ class ProjectLibrary(Base):
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
+    )
+
+    # Foreign key to workspace (nullable — existing projects may not belong to one)
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("workspaces.id", ondelete="SET NULL"),
+        nullable=True,
         index=True,
     )
 
@@ -93,6 +102,9 @@ class ProjectLibrary(Base):
 
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="projects")
+    workspace: Mapped["Workspace | None"] = relationship(
+        "Workspace", back_populates="projects"
+    )
     jobs: Mapped[list["Job"]] = relationship(
         "Job", back_populates="project", cascade="all, delete-orphan"
     )
