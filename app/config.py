@@ -58,6 +58,11 @@ class Config:
     # GitHub API settings
     GITHUB_API_BASE = "https://api.github.com"
 
+    # Neo4j settings
+    NEO4J_URI = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+    NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
+    NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "password")
+
     # Temporary file settings
     TEMP_DIR = "/tmp"
 

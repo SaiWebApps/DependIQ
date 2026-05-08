@@ -1,4 +1,4 @@
-.PHONY: help test lint format run setup clean migrate db-start db-stop db-reset db-status render
+.PHONY: help test lint format run setup clean migrate db-start db-stop db-reset db-status render neo4j-start neo4j-stop neo4j-status
 
 UV := uv
 
@@ -40,7 +40,7 @@ help:
 
 # === Primary targets — all standalone, zero setup required ===
 
-test: clean
+test: clean _check-neo4j
 	@$(UV) run pytest tests/ test_prompt_templates.py --ignore=tests/selenium --assert=plain
 
 lint:
@@ -131,3 +131,21 @@ db-status:
 ARGS ?=
 render:
 	@NO_PROXY= no_proxy= /opt/homebrew/bin/render $(ARGS)
+
+# === Neo4j (local test instance via docker-compose) ===
+
+neo4j-start:
+	@docker compose up -d neo4j-test
+	@echo "Waiting for Neo4j to be healthy..."
+	@until docker compose exec -T neo4j-test cypher-shell -u neo4j -p dependiq_test_2026 "RETURN 1" >/dev/null 2>&1; do sleep 1; done
+	@echo "Neo4j ready at bolt://localhost:7687"
+
+neo4j-stop:
+	@docker compose stop neo4j-test
+
+neo4j-status:
+	@docker ps --filter "name=dependiq-neo4j" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+_check-neo4j:
+	@docker compose exec -T neo4j-test cypher-shell -u neo4j -p dependiq_test_2026 "RETURN 1" >/dev/null 2>&1 || \
+		(echo "ERROR: Neo4j not running. Run: make neo4j-start"; exit 1)

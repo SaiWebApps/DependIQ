@@ -270,3 +270,4 @@ yarl==1.23.0
     # via aiohttp
 zipp==3.23.1
     # via importlib-metadata
+neo4j>=5.20.0

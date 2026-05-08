@@ -35,6 +35,7 @@ dependencies = [
     "email-validator>=2.1.0",
     "pydantic[email]>=2.5.0",
     "workos>=7.0.0",
+    "neo4j>=5.20.0",
 ]
 
 [dependency-groups]

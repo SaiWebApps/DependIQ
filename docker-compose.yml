@@ -1,0 +1,20 @@
+services:
+  neo4j-test:
+    image: neo4j:5
+    container_name: dependiq-neo4j-test
+    ports:
+      - "7687:7687"
+      - "7474:7474"
+    environment:
+      NEO4J_AUTH: neo4j/dependiq_test_2026
+      NEO4J_PLUGINS: '["apoc"]'
+    volumes:
+      - neo4j_test_data:/data
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "dependiq_test_2026", "RETURN 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  neo4j_test_data:

@@ -415,6 +415,7 @@ dependencies = [
     { name = "httpx" },
     { name = "jinja2" },
     { name = "litellm" },
+    { name = "neo4j" },
     { name = "openai" },
     { name = "pydantic", extra = ["email"] },
     { name = "pyjwt" },
@@ -455,6 +456,7 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.24.1" },
     { name = "jinja2", specifier = ">=3.1.4" },
     { name = "litellm", specifier = ">=1.40.0" },
+    { name = "neo4j", specifier = ">=5.20.0" },
     { name = "openai", specifier = ">=1.30.1" },
     { name = "pydantic", extras = ["email"], specifier = ">=2.5.0" },
     { name = "pyjwt", specifier = ">=2.8.0" },
@@ -1062,6 +1064,18 @@ wheels = [
 ]
 
 [[package]]
+name = "neo4j"
+version = "6.2.0"
+source = { registry = "https://pypi.apple.com/simple" }
+dependencies = [
+    { name = "pytz" },
+]
+sdist = { url = "https://pypi.apple.com/packages/packages/ce/f4/aaa4ac19adae4b01bc742b63afd2672a77e7351566f02721e713e4b863ee/neo4j-6.2.0.tar.gz", hash = "sha256:e1e246b65b572bd8ea97f9e0e721b7d40a5ce53e53d0007c29aef63e4f9124d9" }
+wheels = [
+    { url = "https://pypi.apple.com/packages/packages/e6/cf/1c3795866cefaac6e648d4e98c373cafd97810f6e317c307371007ab4abb/neo4j-6.2.0-py3-none-any.whl", hash = "sha256:b87abdd13a5cc2e3bd51026926c2f20ac38fa3febe98c340520dce19e97388d0" },
+]
+
+[[package]]
 name = "openai"
 version = "2.34.0"
 source = { registry = "https://pypi.apple.com/simple" }
@@ -1387,6 +1401,15 @@ source = { registry = "https://pypi.apple.com/simple" }
 sdist = { url = "https://pypi.apple.com/packages/packages/5c/0f/9c55ac6c84c0336e22a26fa84ca6c51d58d7ac3a2d78b0dfa8748826c883/python_multipart-0.0.9.tar.gz", hash = "sha256:03f54688c663f1b7977105f021043b0793151e4cb1c1a9d4a11fc13d622c4026" }
 wheels = [
     { url = "https://pypi.apple.com/packages/packages/3d/47/444768600d9e0ebc82f8e347775d24aef8f6348cf00e9fa0e81910814e6d/python_multipart-0.0.9-py3-none-any.whl", hash = "sha256:97ca7b8ea7b05f977dc3849c3ba99d51689822fab725c3703af7c866a0c2b215" },
+]
+
+[[package]]
+name = "pytz"
+version = "2026.2"
+source = { registry = "https://pypi.apple.com/simple" }
+sdist = { url = "https://pypi.apple.com/packages/packages/ff/46/dd499ec9038423421951e4fad73051febaa13d2df82b4064f87af8b8c0c3/pytz-2026.2.tar.gz", hash = "sha256:0e60b47b29f21574376f218fe21abc009894a2321ea16c6754f3cad6eb7cdd6a" }
+wheels = [
+    { url = "https://pypi.apple.com/packages/packages/ec/dd/96da98f892250475bdf2328112d7468abdd4acc7b902b6af23f4ed958ea0/pytz-2026.2-py2.py3-none-any.whl", hash = "sha256:04156e608bee23d3792fd45c94ae47fae1036688e75032eea2e3bf0323d1f126" },
 ]
 
 [[package]]

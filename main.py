@@ -157,19 +157,26 @@ async def history_page(request: Request, db: AsyncSession = Depends(get_db)):
 @app.get("/health")
 async def health_check(db: AsyncSession = Depends(get_db)):
     """Health check endpoint for Render monitoring"""
+    from app.graph.connection import neo4j_health_check
+
     try:
-        # Test database connection
         await db.execute("SELECT 1")
-        return {
-            "status": "healthy",
-            "service": "dependiq",
-            "environment": Config.ENVIRONMENT
-            if hasattr(Config, "ENVIRONMENT")
-            else "unknown",
-            "version": "1.0.0",
-        }
+        pg_status = "connected"
     except Exception as e:
-        return {"status": "unhealthy", "error": str(e)}
+        pg_status = f"error: {e}"
+
+    neo4j_status = await neo4j_health_check()
+
+    return {
+        "status": "healthy" if pg_status == "connected" else "unhealthy",
+        "service": "dependiq",
+        "environment": Config.ENVIRONMENT
+        if hasattr(Config, "ENVIRONMENT")
+        else "unknown",
+        "version": "1.0.0",
+        "postgres": pg_status,
+        "neo4j": neo4j_status,
+    }
 
 
 # Optional: Add startup event for cleanup
@@ -179,16 +186,18 @@ async def startup_event():
     print("🚀 DependIQ application starting up...")
     print(f"📡 Max SSE iterations: {Config.MAX_SSE_ITERATIONS}")
     print("🤖 AI: litellm agent layer (Anthropic/OpenAI/Ollama)")
+    print(f"📊 Neo4j: {Config.NEO4J_URI}")
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Application shutdown tasks"""
     print("🛑 DependIQ application shutting down...")
-    # Clean up any remaining sessions, temp files, etc.
+    from app.graph.connection import close_neo4j
     from app.services.progress_service import cleanup_old_sessions
 
-    cleanup_old_sessions(max_age=0)  # Clean all sessions on shutdown
+    await close_neo4j()
+    cleanup_old_sessions(max_age=0)
 
 
 if __name__ == "__main__":

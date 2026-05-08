@@ -19,6 +19,7 @@ class EventType(StrEnum):
     PROGRESS = "progress"
     RESULT = "result"
     ERROR = "error"
+    COMPLETE = "complete"
 
 
 @dataclass
@@ -35,7 +36,7 @@ class AnalysisEvent:
         error      — an error occurred during analysis
     """
 
-    type: str  # thinking, tool_call, tool_result, progress, result, error
+    type: str  # thinking, tool_call, tool_result, progress, result, error, complete
     content: str | None = None
     name: str | None = None
     input: dict | None = None
@@ -43,6 +44,11 @@ class AnalysisEvent:
     phase: str | None = None
     pct: int | None = None
     data: dict | None = None
+
+    @property
+    def event_type(self) -> str:
+        """Alias for type field."""
+        return self.type
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a dict, omitting None fields for cleaner JSON."""
@@ -84,3 +90,7 @@ class AnalysisEvent:
     @classmethod
     def error(cls, content: str) -> "AnalysisEvent":
         return cls(type=EventType.ERROR, content=content, data={"error": content})
+
+    @classmethod
+    def complete(cls) -> "AnalysisEvent":
+        return cls(type=EventType.COMPLETE, content="Analysis complete", data={})
