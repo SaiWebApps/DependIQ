@@ -119,7 +119,9 @@ class TestGitHubAPI:
                 }
             ]
 
-            response = test_client.get("/api/projects/github/repositories", headers=auth_headers)
+            response = test_client.get(
+                "/api/projects/github/repositories", headers=auth_headers
+            )
 
             # May fail if no GitHub token is linked or validation error
             assert response.status_code in [
@@ -280,8 +282,7 @@ class TestAPIPerformance:
     def test_multiple_sequential_profile_requests(self, test_client, auth_headers):
         """Test handling multiple sequential requests to profile endpoint"""
         results = [
-            test_client.get("/api/user/profile", headers=auth_headers)
-            for _ in range(5)
+            test_client.get("/api/user/profile", headers=auth_headers) for _ in range(5)
         ]
 
         for response in results:

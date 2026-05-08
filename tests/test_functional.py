@@ -28,18 +28,23 @@ def mock_session_verification(test_user):
     from workos.session import AuthenticateWithSessionCookieSuccessResponse
 
     with patch("app.services.workos_auth.verify_or_refresh_session") as mock_verify:
-        mock_verify.return_value = (AuthenticateWithSessionCookieSuccessResponse(
-            authenticated=True,
-            session_id="sess_func_test",
-            user={"id": TEST_WORKOS_USER_ID, "email": "test@example.com"},
-        ), None)
+        mock_verify.return_value = (
+            AuthenticateWithSessionCookieSuccessResponse(
+                authenticated=True,
+                session_id="sess_func_test",
+                user={"id": TEST_WORKOS_USER_ID, "email": "test@example.com"},
+            ),
+            None,
+        )
         yield mock_verify
 
 
 class TestProjectAnalysisWorkflow:
     """Test project analysis end-to-end workflow"""
 
-    def test_python_project_analysis(self, test_client, test_user, auth_cookies, mock_session_verification):
+    def test_python_project_analysis(
+        self, test_client, test_user, auth_cookies, mock_session_verification
+    ):
         """Test analyzing a Python project from upload to results"""
         # Create a test Python project ZIP
         with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp_file:
@@ -63,7 +68,9 @@ class TestProjectAnalysisWorkflow:
                 status.HTTP_307_TEMPORARY_REDIRECT,
             ]
 
-    def test_gradle_project_workflow(self, test_client, test_user, auth_cookies, mock_session_verification):
+    def test_gradle_project_workflow(
+        self, test_client, test_user, auth_cookies, mock_session_verification
+    ):
         """Test analyzing a Gradle project"""
         with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp_file:
             with zipfile.ZipFile(tmp_file.name, "w") as zf:
@@ -118,15 +125,19 @@ class TestGitHubIntegrationWorkflow:
         from tests.conftest import TEST_GITHUB_WORKOS_USER_ID
 
         with patch("app.services.workos_auth.verify_or_refresh_session") as mock_v:
-            mock_v.return_value = (AuthenticateWithSessionCookieSuccessResponse(
-                authenticated=True,
-                session_id="sess_func_github",
-                user={"id": TEST_GITHUB_WORKOS_USER_ID, "email": "github@example.com"},
-            ), None)
+            mock_v.return_value = (
+                AuthenticateWithSessionCookieSuccessResponse(
+                    authenticated=True,
+                    session_id="sess_func_github",
+                    user={
+                        "id": TEST_GITHUB_WORKOS_USER_ID,
+                        "email": "github@example.com",
+                    },
+                ),
+                None,
+            )
 
-            with patch(
-                "app.api.projects.get_github_repositories"
-            ) as mock_repos:
+            with patch("app.api.projects.get_github_repositories") as mock_repos:
                 mock_repos.return_value = [
                     {
                         "id": 1,
@@ -150,12 +161,12 @@ class TestGitHubIntegrationWorkflow:
 class TestUserPreferencesWorkflow:
     """Test user preferences management workflow"""
 
-    def test_theme_switching_workflow(self, test_client, test_user, auth_cookies, mock_session_verification):
+    def test_theme_switching_workflow(
+        self, test_client, test_user, auth_cookies, mock_session_verification
+    ):
         """Test switching between light and dark themes"""
         # Get current theme
-        prefs_response = test_client.get(
-            "/api/user/preferences", cookies=auth_cookies
-        )
+        prefs_response = test_client.get("/api/user/preferences", cookies=auth_cookies)
         assert prefs_response.status_code == status.HTTP_200_OK
 
         # Switch to dark theme
@@ -167,9 +178,7 @@ class TestUserPreferencesWorkflow:
         assert update_response.status_code == status.HTTP_200_OK
 
         # Verify theme changed
-        verify_response = test_client.get(
-            "/api/user/preferences", cookies=auth_cookies
-        )
+        verify_response = test_client.get("/api/user/preferences", cookies=auth_cookies)
         updated_prefs = verify_response.json()
         assert updated_prefs["theme"] == "dark"
 
@@ -181,7 +190,9 @@ class TestUserPreferencesWorkflow:
         )
         assert revert_response.status_code == status.HTTP_200_OK
 
-    def test_language_preference_workflow(self, test_client, test_user, auth_cookies, mock_session_verification):
+    def test_language_preference_workflow(
+        self, test_client, test_user, auth_cookies, mock_session_verification
+    ):
         """Test changing language preference"""
         languages_to_test = ["en", "es", "fr", "de"]
 
@@ -196,7 +207,9 @@ class TestUserPreferencesWorkflow:
             data = response.json()
             assert data["language"] == lang
 
-    def test_notification_toggle_workflow(self, test_client, test_user, auth_cookies, mock_session_verification):
+    def test_notification_toggle_workflow(
+        self, test_client, test_user, auth_cookies, mock_session_verification
+    ):
         """Test toggling notifications on and off"""
         # Enable notifications
         enable_response = test_client.put(

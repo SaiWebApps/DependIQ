@@ -50,7 +50,9 @@ async def analyze_dependencies(
     session_id = str(int(time.time() * 1000))
     logger.info(
         "UPLOAD: Created session %s for file %s by user %s",
-        session_id, file.filename, current_user.email,
+        session_id,
+        file.filename,
+        current_user.email,
     )
 
     # Store the uploaded file temporarily
@@ -59,7 +61,9 @@ async def analyze_dependencies(
     try:
         with open(temp_file_path, "wb") as f:
             shutil.copyfileobj(file.file, f)
-        logger.info("UPLOAD: Successfully saved %d bytes", os.path.getsize(temp_file_path))
+        logger.info(
+            "UPLOAD: Successfully saved %d bytes", os.path.getsize(temp_file_path)
+        )
     except Exception as e:
         logger.error("UPLOAD: Error saving file: %s", e)
         return {"error": f"Failed to save uploaded file: {e!s}"}

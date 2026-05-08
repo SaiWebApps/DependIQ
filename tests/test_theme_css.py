@@ -19,9 +19,9 @@ class TestThemeCSSDefinitions:
         for theme in themes:
             # Check for theme definition
             pattern = rf'body\[data-theme="{theme}"\]\s*\{{'
-            assert re.search(
-                pattern, css_content
-            ), f"Theme '{theme}' not defined in main.css"
+            assert re.search(pattern, css_content), (
+                f"Theme '{theme}' not defined in main.css"
+            )
 
     def test_dark_mode_css_exists(self):
         """Dark mode CSS should exist"""
@@ -58,9 +58,9 @@ class TestThemeCSSDefinitions:
             theme_css = match.group(1)
 
             for var in required_variables:
-                assert (
-                    var in theme_css
-                ), f"Variable '{var}' not defined for theme '{theme}'"
+                assert var in theme_css, (
+                    f"Variable '{var}' not defined for theme '{theme}'"
+                )
 
     def test_root_variables_defined(self):
         """Root CSS variables should be defined"""
@@ -99,15 +99,15 @@ class TestThemeCSSStructure:
         for theme in dark_themes:
             # Check for sidebar styles
             pattern = rf'body\[data-theme="{theme}"\]\s+\.sidebar'
-            assert re.search(
-                pattern, css_content
-            ), f"Theme '{theme}' missing sidebar styles"
+            assert re.search(pattern, css_content), (
+                f"Theme '{theme}' missing sidebar styles"
+            )
 
             # Check for stat-card styles
             pattern = rf'body\[data-theme="{theme}"\]\s+\.stat-card'
-            assert re.search(
-                pattern, css_content
-            ), f"Theme '{theme}' missing stat-card styles"
+            assert re.search(pattern, css_content), (
+                f"Theme '{theme}' missing stat-card styles"
+            )
 
     def test_css_file_size_reasonable(self):
         """CSS file should not be excessively large"""
@@ -136,9 +136,9 @@ class TestCSSColorValues:
         hex_pattern = r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
 
         for color_value in matches:
-            assert re.match(
-                hex_pattern, color_value
-            ), f"Invalid hex color: {color_value}"
+            assert re.match(hex_pattern, color_value), (
+                f"Invalid hex color: {color_value}"
+            )
 
     def test_accent_colors_defined(self):
         """Each theme should have status colors"""
@@ -168,6 +168,6 @@ class TestCSSComments:
         themes = ["Ocean", "Forest", "Nord", "Dracula"]
 
         for theme in themes:
-            assert (
-                f"/* {theme}" in css_content
-            ), f"Theme '{theme}' missing descriptive comment"
+            assert f"/* {theme}" in css_content, (
+                f"Theme '{theme}' missing descriptive comment"
+            )

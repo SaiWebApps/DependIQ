@@ -12,7 +12,6 @@ from app.services.workos_auth import SESSION_COOKIE_NAME
 
 
 class TestSealUnseal:
-
     def test_seal_produces_encrypted_output(self, fernet_key, make_access_token):
         token = make_access_token()
         sealed = seal_session_from_auth_response(

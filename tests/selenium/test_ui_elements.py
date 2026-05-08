@@ -27,21 +27,21 @@ class TestUIElements:
         password_input = driver.find_element(By.ID, "password")
         toggle_btn = driver.find_element(By.CLASS_NAME, "password-toggle")
 
-        assert (
-            password_input.get_attribute("type") == "password"
-        ), "Password field should start as password type"
+        assert password_input.get_attribute("type") == "password", (
+            "Password field should start as password type"
+        )
 
         toggle_btn.click()
         time.sleep(0.5)
-        assert (
-            password_input.get_attribute("type") == "text"
-        ), "Password field should change to text type"
+        assert password_input.get_attribute("type") == "text", (
+            "Password field should change to text type"
+        )
 
         toggle_btn.click()
         time.sleep(0.5)
-        assert (
-            password_input.get_attribute("type") == "password"
-        ), "Password field should return to password type"
+        assert password_input.get_attribute("type") == "password", (
+            "Password field should return to password type"
+        )
 
         print("✓ Password visibility toggle working")
 
@@ -61,8 +61,8 @@ class TestUIElements:
         forgot_link.click()
 
         wait.until(lambda d: "/forgot-password" in d.current_url)
-        assert (
-            "/forgot-password" in driver.current_url
-        ), "Should navigate to forgot password page"
+        assert "/forgot-password" in driver.current_url, (
+            "Should navigate to forgot password page"
+        )
 
         print("✓ Forgot password link working")

@@ -51,7 +51,9 @@ def run_analysis(session_id: str) -> None:
 
         if session_id not in analysis_status:
             update_analysis_progress(session_id, "Error", 0, "Session not found")
-            logger.error("ANALYSIS: Session %s not found in analysis_status", session_id)
+            logger.error(
+                "ANALYSIS: Session %s not found in analysis_status", session_id
+            )
             return
 
         file_info = analysis_status[session_id]
@@ -84,9 +86,13 @@ def run_analysis(session_id: str) -> None:
                 target_dir = os.path.realpath(tmpdir)
                 for member in zip_ref.namelist():
                     member_path = os.path.realpath(os.path.join(tmpdir, member))
-                    if not member_path.startswith(target_dir + os.sep) and member_path != target_dir:
+                    if (
+                        not member_path.startswith(target_dir + os.sep)
+                        and member_path != target_dir
+                    ):
                         logger.warning(
-                            "ANALYSIS: Skipping zip member with path traversal: %s", member
+                            "ANALYSIS: Skipping zip member with path traversal: %s",
+                            member,
                         )
                         continue
                     zip_ref.extract(member, tmpdir)
@@ -179,7 +185,8 @@ def run_analysis(session_id: str) -> None:
 
                 logger.info(
                     "ANALYSIS: %d files after filtering (%d excluded)",
-                    len(project_files), len(excluded_files),
+                    len(project_files),
+                    len(excluded_files),
                 )
 
                 # --- Phase 7: Persist results ---
@@ -212,10 +219,16 @@ def run_analysis(session_id: str) -> None:
 
                 # Update project history
                 _update_project_history_completed(
-                    session_id, project_type, dep_file_name, update_session_id, dependencies
+                    session_id,
+                    project_type,
+                    dep_file_name,
+                    update_session_id,
+                    dependencies,
                 )
 
-                logger.info("ANALYSIS COMPLETE: Session %s finished successfully", session_id)
+                logger.info(
+                    "ANALYSIS COMPLETE: Session %s finished successfully", session_id
+                )
 
             except Exception as analysis_err:
                 error_msg = f"Error during project analysis: {analysis_err!s}"
@@ -255,7 +268,9 @@ def _read_dependency_files(
         )
 
         sbt_files = collect_sbt_files(tmpdir)
-        logger.info("SBT FILES: Collected %d files: %s", len(sbt_files), list(sbt_files.keys()))
+        logger.info(
+            "SBT FILES: Collected %d files: %s", len(sbt_files), list(sbt_files.keys())
+        )
 
         combined_content = ""
         for file_path, content in sbt_files.items():
@@ -417,7 +432,10 @@ def _update_project_history_completed(
                     "update_session_id": update_session_id,
                 },
             )
-            logger.info("HISTORY: Updated project status to completed for session %s", session_id)
+            logger.info(
+                "HISTORY: Updated project status to completed for session %s",
+                session_id,
+            )
 
     asyncio.run(_do_update())
 

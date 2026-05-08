@@ -18,8 +18,9 @@ from app.services.workos_auth import verify_or_refresh_session
 
 
 class TestSessionVerify:
-
-    def test_valid_session_returns_authenticated(self, fernet_key, make_sealed_session, mock_jwks):
+    def test_valid_session_returns_authenticated(
+        self, fernet_key, make_sealed_session, mock_jwks
+    ):
         sealed = make_sealed_session(user_id="user_99", email="valid@test.com")
 
         with patch("app.services.workos_auth.Config") as mock_config:
@@ -28,7 +29,9 @@ class TestSessionVerify:
             mock_config.WORKOS_COOKIE_PASSWORD = fernet_key
 
             with patch("app.services.workos_auth.get_workos_client") as mock_get_client:
-                mock_session_obj = self._build_mock_session(sealed, fernet_key, mock_jwks)
+                mock_session_obj = self._build_mock_session(
+                    sealed, fernet_key, mock_jwks
+                )
                 mock_get_client.return_value.user_management.load_sealed_session.return_value = mock_session_obj
 
                 result, new_cookie = verify_or_refresh_session(sealed)
@@ -38,7 +41,9 @@ class TestSessionVerify:
         assert result.user["id"] == "user_99"
         assert new_cookie is None
 
-    def test_expired_jwt_triggers_refresh(self, fernet_key, make_sealed_session, mock_jwks):
+    def test_expired_jwt_triggers_refresh(
+        self, fernet_key, make_sealed_session, mock_jwks
+    ):
         sealed = make_sealed_session(user_id="user_exp", expired=True)
 
         with patch("app.services.workos_auth.get_workos_client") as mock_get_client:
@@ -77,7 +82,9 @@ class TestSessionVerify:
         sealed = make_sealed_session(user_id="user_dead", expired=True)
 
         with patch("app.services.workos_auth.get_workos_client") as mock_get_client:
-            mock_session_obj = self._build_expired_session_refresh_fails(sealed, fernet_key)
+            mock_session_obj = self._build_expired_session_refresh_fails(
+                sealed, fernet_key
+            )
             mock_get_client.return_value.user_management.load_sealed_session.return_value = mock_session_obj
 
             with patch("app.services.workos_auth.Config") as mock_config:
@@ -93,10 +100,12 @@ class TestSessionVerify:
     @staticmethod
     def _build_mock_session(sealed, fernet_key, mock_jwks):
         session = MagicMock()
-        session.authenticate.return_value = AuthenticateWithSessionCookieSuccessResponse(
-            authenticated=True,
-            session_id="sess_01",
-            user={"id": "user_99", "email": "valid@test.com"},
+        session.authenticate.return_value = (
+            AuthenticateWithSessionCookieSuccessResponse(
+                authenticated=True,
+                session_id="sess_01",
+                user={"id": "user_99", "email": "valid@test.com"},
+            )
         )
         return session
 

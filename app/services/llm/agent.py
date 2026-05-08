@@ -11,11 +11,13 @@ works with the same code.
 import json
 import logging
 import os
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
 from typing import Any
 
 import litellm
 
+from .events import AnalysisEvent
 from .router import ModelRouter, TaskType
 from .tools import ToolRegistry, create_default_registry
 
@@ -147,6 +149,147 @@ class Agent:
             model_used=model,
             tool_calls_made=tool_calls_made,
             total_tokens=total_tokens,
+        )
+
+    async def run_streaming(
+        self,
+        task: TaskType,
+        prompt: str,
+        system: str = "",
+    ) -> AsyncGenerator[AnalysisEvent, None]:
+        """
+        Run the agent loop, yielding AnalysisEvent objects as work progresses.
+
+        Same logic as run() but yields events instead of collecting a single result.
+        The existing run() method is unchanged — this is purely additive.
+
+        Event sequence:
+            progress (starting) → [thinking | tool_call → tool_result]* → result
+
+        Args:
+            task: What kind of work this is (determines model selection)
+            prompt: The user prompt
+            system: Optional system prompt
+
+        Yields:
+            AnalysisEvent objects representing each step of the agent's work
+        """
+        model_chain = self.router.filter_chain_by_available(task)
+        if not model_chain:
+            model_chain = self.router.get_model_chain(task)
+
+        model = model_chain[0]
+        fallbacks = model_chain[1:]
+        config = self.router.get_config(task)
+
+        messages: list[dict[str, Any]] = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+
+        tool_schemas = self.tools.schemas_openai()
+        tool_calls_made = 0
+
+        yield AnalysisEvent(
+            type="progress",
+            phase="starting",
+            pct=0,
+        )
+
+        for iteration in range(self.max_iterations):
+            pct = int((iteration / self.max_iterations) * 80) + 10
+
+            try:
+                response = await litellm.acompletion(
+                    model=model,
+                    messages=messages,
+                    tools=tool_schemas if tool_schemas else None,
+                    temperature=config["temperature"],
+                    max_tokens=config["max_tokens"],
+                )
+            except Exception as e:
+                if fallbacks:
+                    logger.warning(f"Model {model} failed ({e}), trying fallback")
+                    model = fallbacks.pop(0)
+                    continue
+                raise
+
+            choice = response.choices[0]
+            message = choice.message
+
+            # No tool calls — this is the final response
+            if not message.tool_calls:
+                content = message.content or ""
+                if content:
+                    yield AnalysisEvent(type="thinking", content=content)
+
+                yield AnalysisEvent(
+                    type="progress",
+                    phase="complete",
+                    pct=100,
+                )
+                yield AnalysisEvent(
+                    type="result",
+                    data={
+                        "content": content,
+                        "model_used": model,
+                        "tool_calls_made": tool_calls_made,
+                    },
+                )
+                return
+
+            # Process tool calls
+            messages.append(message.model_dump())
+
+            for tool_call in message.tool_calls:
+                fn_name = tool_call.function.name
+                try:
+                    fn_args = json.loads(tool_call.function.arguments)
+                except json.JSONDecodeError:
+                    fn_args = {}
+
+                yield AnalysisEvent(
+                    type="tool_call",
+                    name=fn_name,
+                    input=fn_args,
+                )
+
+                yield AnalysisEvent(
+                    type="progress",
+                    phase=f"calling {fn_name}",
+                    pct=pct,
+                )
+
+                result = await self.tools.execute(fn_name, fn_args)
+                tool_calls_made += 1
+
+                yield AnalysisEvent(
+                    type="tool_result",
+                    name=fn_name,
+                    output=result[:2000],  # Truncate for event consumers
+                )
+
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "content": result,
+                    }
+                )
+
+        # Max iterations reached
+        yield AnalysisEvent(
+            type="progress",
+            phase="max_iterations",
+            pct=100,
+        )
+        yield AnalysisEvent(
+            type="result",
+            data={
+                "content": "Max iterations reached without final response.",
+                "model_used": model,
+                "tool_calls_made": tool_calls_made,
+            },
         )
 
     async def run_simple(

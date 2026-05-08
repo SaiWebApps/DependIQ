@@ -35,7 +35,9 @@ class TestWorkOSAuthService:
         mock_um.get_authorization_url.return_value = "https://authkit.workos.com/gh"
         mock_client.return_value.user_management = mock_um
 
-        url, state = get_authorization_url(provider="GitHubOAuth", provider_scopes=["repo"])
+        url, state = get_authorization_url(
+            provider="GitHubOAuth", provider_scopes=["repo"]
+        )
 
         assert "authkit.workos.com" in url
         assert len(state) > 20
@@ -77,11 +79,9 @@ class TestWorkOSAuthService:
         )
 
         mock_session = MagicMock()
-        mock_session.authenticate.return_value = (
-            AuthenticateWithSessionCookieErrorResponse(
-                authenticated=False,
-                reason=AuthenticateWithSessionCookieFailureReason.INVALID_SESSION_COOKIE,
-            )
+        mock_session.authenticate.return_value = AuthenticateWithSessionCookieErrorResponse(
+            authenticated=False,
+            reason=AuthenticateWithSessionCookieFailureReason.INVALID_SESSION_COOKIE,
         )
         mock_um = MagicMock()
         mock_um.load_sealed_session.return_value = mock_session

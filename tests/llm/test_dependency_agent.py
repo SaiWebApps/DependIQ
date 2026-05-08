@@ -136,10 +136,20 @@ class TestExtractDependencies:
     async def test_extracts_from_requirements_txt(self, dep_agent):
         with patch.object(dep_agent.agent, "run", new_callable=AsyncMock) as mock_run:
             mock_run.return_value = AgentResult(
-                content=json.dumps([
-                    {"name": "flask", "current_version": "2.0.0", "description": "Web framework"},
-                    {"name": "requests", "current_version": "2.28.0", "description": "HTTP library"},
-                ]),
+                content=json.dumps(
+                    [
+                        {
+                            "name": "flask",
+                            "current_version": "2.0.0",
+                            "description": "Web framework",
+                        },
+                        {
+                            "name": "requests",
+                            "current_version": "2.28.0",
+                            "description": "HTTP library",
+                        },
+                    ]
+                ),
                 model_used="test",
                 tool_calls_made=0,
             )
@@ -188,7 +198,7 @@ class TestExtractJson:
         assert dep_agent._extract_json('{"a": 1}') == '{"a": 1}'
 
     def test_raw_json_array(self, dep_agent):
-        assert dep_agent._extract_json('[1, 2]') == '[1, 2]'
+        assert dep_agent._extract_json("[1, 2]") == "[1, 2]"
 
     def test_markdown_fenced(self, dep_agent):
         content = 'Here:\n```json\n{"a": 1}\n```\nDone'
@@ -199,5 +209,5 @@ class TestExtractJson:
         assert dep_agent._extract_json(content) == '{"a": 1}'
 
     def test_generic_code_fence(self, dep_agent):
-        content = '```\n[1, 2, 3]\n```'
-        assert dep_agent._extract_json(content) == '[1, 2, 3]'
+        content = "```\n[1, 2, 3]\n```"
+        assert dep_agent._extract_json(content) == "[1, 2, 3]"

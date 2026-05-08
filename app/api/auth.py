@@ -89,13 +89,17 @@ async def callback(
 
     expected_state = request.cookies.get(STATE_COOKIE_NAME)
     if not state or not expected_state or state != expected_state:
-        logger.warning("OAuth state mismatch: expected=%s got=%s", expected_state, state)
+        logger.warning(
+            "OAuth state mismatch: expected=%s got=%s", expected_state, state
+        )
         return RedirectResponse(url="/login?error=invalid_state", status_code=302)
 
     try:
         auth_response = authenticate_callback(code)
     except Exception as e:
-        logger.error("WorkOS authenticate_with_code failed: %s: %s", type(e).__name__, e)
+        logger.error(
+            "WorkOS authenticate_with_code failed: %s: %s", type(e).__name__, e
+        )
         return RedirectResponse(url="/login?error=auth_failed", status_code=302)
 
     workos_user = auth_response.user

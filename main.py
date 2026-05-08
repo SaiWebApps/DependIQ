@@ -45,6 +45,7 @@ async def refresh_session_middleware(request: Request, call_next):
         )
     return response
 
+
 # Mount static files and templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/images", StaticFiles(directory="images"), name="images")

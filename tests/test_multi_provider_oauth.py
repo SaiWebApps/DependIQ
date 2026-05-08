@@ -23,7 +23,9 @@ class TestProviderAuthorizationURLs:
     @pytest.fixture(autouse=True)
     def _require_workos_keys(self):
         if not os.getenv("WORKOS_API_KEY") or not os.getenv("WORKOS_CLIENT_ID"):
-            pytest.fail("WORKOS_API_KEY and WORKOS_CLIENT_ID must be set to run integration tests")
+            pytest.fail(
+                "WORKOS_API_KEY and WORKOS_CLIENT_ID must be set to run integration tests"
+            )
 
     @pytest.mark.parametrize("provider", ALL_PROVIDERS)
     def test_workos_accepts_provider_string(self, provider):
@@ -87,11 +89,14 @@ class TestMultiProviderCallback:
 
         return mock_response
 
-    @pytest.mark.parametrize("provider,email", [
-        ("GoogleOAuth", "user@gmail.com"),
-        ("MicrosoftOAuth", "user@outlook.com"),
-        ("AppleOAuth", "user@privaterelay.appleid.com"),
-    ])
+    @pytest.mark.parametrize(
+        "provider,email",
+        [
+            ("GoogleOAuth", "user@gmail.com"),
+            ("MicrosoftOAuth", "user@outlook.com"),
+            ("AppleOAuth", "user@privaterelay.appleid.com"),
+        ],
+    )
     @patch("app.api.auth.seal_session")
     @patch("app.api.auth.authenticate_callback")
     def test_callback_creates_user_for_provider(
@@ -111,11 +116,14 @@ class TestMultiProviderCallback:
         assert response.headers["location"] == "/"
         assert SESSION_COOKIE_NAME in response.headers.get("set-cookie", "")
 
-    @pytest.mark.parametrize("provider,email", [
-        ("GoogleOAuth", "user@gmail.com"),
-        ("MicrosoftOAuth", "user@outlook.com"),
-        ("AppleOAuth", "user@privaterelay.appleid.com"),
-    ])
+    @pytest.mark.parametrize(
+        "provider,email",
+        [
+            ("GoogleOAuth", "user@gmail.com"),
+            ("MicrosoftOAuth", "user@outlook.com"),
+            ("AppleOAuth", "user@privaterelay.appleid.com"),
+        ],
+    )
     @patch("app.api.auth.seal_session")
     @patch("app.api.auth.authenticate_callback")
     def test_callback_with_oauth_tokens_does_not_crash(

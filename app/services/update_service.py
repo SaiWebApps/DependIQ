@@ -217,7 +217,9 @@ def _match_updated_paths(
         matching_original_path = find_matching_path(chatgpt_path, original_paths)
         if matching_original_path:
             matched_updates[matching_original_path] = updated_content
-            print(f"MATCHED: ChatGPT '{chatgpt_path}' -> Original '{matching_original_path}'")
+            print(
+                f"MATCHED: ChatGPT '{chatgpt_path}' -> Original '{matching_original_path}'"
+            )
         else:
             matched_updates[chatgpt_path] = updated_content
             print(f"NEW FILE: ChatGPT wants to create '{chatgpt_path}'")
@@ -314,9 +316,7 @@ def _create_output_zip(
         files_added_to_zip = 0
 
         for root, dirs, files in os.walk(tmpdir):
-            dirs[:] = [
-                d for d in dirs if d not in final_excluded_dirs
-            ]
+            dirs[:] = [d for d in dirs if d not in final_excluded_dirs]
 
             for file in files:
                 full_path = os.path.join(root, file)
@@ -333,8 +333,7 @@ def _create_output_zip(
 
                 # Log first few lines of updated source files
                 if rel_path in matched_updates and any(
-                    rel_path.endswith(ext)
-                    for ext in [".sbt", ".scala", ".java", ".py"]
+                    rel_path.endswith(ext) for ext in [".sbt", ".scala", ".java", ".py"]
                 ):
                     try:
                         with open(full_path, encoding="utf-8") as f:
@@ -343,7 +342,9 @@ def _create_output_zip(
                     except (UnicodeDecodeError, OSError):
                         pass
 
-        print(f"ZIP COMPLETE: Added {files_added_to_zip} total files to {temp_output_path}")
+        print(
+            f"ZIP COMPLETE: Added {files_added_to_zip} total files to {temp_output_path}"
+        )
 
 
 def _build_exclusion_info(data_file: str) -> str:
@@ -355,7 +356,7 @@ def _build_exclusion_info(data_file: str) -> str:
                 analysis = session_data["exclusion_analysis"]
                 sample_excluded = "\n".join(analysis["excluded_files"][:10])
                 overflow = (
-                    f'... and {len(analysis["excluded_files"]) - 10} more files'
+                    f"... and {len(analysis['excluded_files']) - 10} more files"
                     if len(analysis["excluded_files"]) > 10
                     else ""
                 )
@@ -410,8 +411,11 @@ def _build_summary_table(
 
         # Skip invalid file paths (LLM descriptions rather than paths)
         clean_name = (
-            file_path.replace("/", "").replace("\\", "").replace(".", "")
-            .replace("-", "").replace("_", "")
+            file_path.replace("/", "")
+            .replace("\\", "")
+            .replace(".", "")
+            .replace("-", "")
+            .replace("_", "")
         )
         if not file_path or " " in clean_name:
             print(f"SKIPPING INVALID FILE PATH: '{file_path}'")
@@ -424,8 +428,8 @@ def _build_summary_table(
                 for d in dependencies
                 if d.current_version != d.latest_version
             ]
-            change_summary = (
-                f"Updated {len(changes)} dependencies: " + ", ".join(changes[:3])
+            change_summary = f"Updated {len(changes)} dependencies: " + ", ".join(
+                changes[:3]
             )
             if len(changes) > 3:
                 change_summary += f" and {len(changes) - 3} more"
@@ -448,7 +452,7 @@ def _build_summary_table(
             </tr>
         </thead>
         <tbody>
-            {''.join(update_summary)}
+            {"".join(update_summary)}
         </tbody>
     </table>
     """

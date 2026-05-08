@@ -21,9 +21,9 @@ class TestThemeValidation:
                 "/api/user/preferences", headers=auth_headers, json={"theme": theme}
             )
 
-            assert (
-                response.status_code == status.HTTP_200_OK
-            ), f"Theme '{theme}' should be valid but got {response.status_code}"
+            assert response.status_code == status.HTTP_200_OK, (
+                f"Theme '{theme}' should be valid but got {response.status_code}"
+            )
             data = response.json()
             assert data["theme"] == theme
 
@@ -36,9 +36,9 @@ class TestThemeValidation:
                 "/api/user/preferences", headers=auth_headers, json={"theme": theme}
             )
 
-            assert (
-                response.status_code == status.HTTP_400_BAD_REQUEST
-            ), f"Theme '{theme}' should be rejected"
+            assert response.status_code == status.HTTP_400_BAD_REQUEST, (
+                f"Theme '{theme}' should be rejected"
+            )
             assert "must be one of" in response.json()["detail"].lower()
 
     def test_theme_case_sensitive(self, test_client, auth_headers):

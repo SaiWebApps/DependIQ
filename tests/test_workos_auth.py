@@ -84,7 +84,8 @@ class TestAuthCallback:
 
         test_client.cookies.set(STATE_COOKIE_NAME, "test_state_token")
         response = test_client.get(
-            "/api/auth/callback?code=valid&state=test_state_token", follow_redirects=False
+            "/api/auth/callback?code=valid&state=test_state_token",
+            follow_redirects=False,
         )
 
         assert response.status_code == 302
@@ -112,9 +113,7 @@ class TestAuthCallback:
         assert response.status_code == 302
 
     @patch("app.api.auth.authenticate_callback")
-    def test_callback_with_invalid_code_redirects_error(
-        self, mock_auth, test_client
-    ):
+    def test_callback_with_invalid_code_redirects_error(self, mock_auth, test_client):
         """Invalid code should redirect to login with error."""
         mock_auth.side_effect = Exception("Invalid code")
 
@@ -156,11 +155,14 @@ class TestProtectedRoutes:
         self, mock_verify, test_client, test_user
     ):
         """GET /api/auth/me with valid session should return user info."""
-        mock_verify.return_value = (AuthenticateWithSessionCookieSuccessResponse(
-            authenticated=True,
-            session_id="sess_test_me",
-            user={"id": TEST_WORKOS_USER_ID, "email": "test@example.com"},
-        ), None)
+        mock_verify.return_value = (
+            AuthenticateWithSessionCookieSuccessResponse(
+                authenticated=True,
+                session_id="sess_test_me",
+                user={"id": TEST_WORKOS_USER_ID, "email": "test@example.com"},
+            ),
+            None,
+        )
 
         response = test_client.get(
             "/api/auth/me",
@@ -182,11 +184,14 @@ class TestProtectedRoutes:
         self, mock_verify, test_client, test_user
     ):
         """GET / with valid session should return 200."""
-        mock_verify.return_value = (AuthenticateWithSessionCookieSuccessResponse(
-            authenticated=True,
-            session_id="sess_test_home",
-            user={"id": TEST_WORKOS_USER_ID, "email": "test@example.com"},
-        ), None)
+        mock_verify.return_value = (
+            AuthenticateWithSessionCookieSuccessResponse(
+                authenticated=True,
+                session_id="sess_test_home",
+                user={"id": TEST_WORKOS_USER_ID, "email": "test@example.com"},
+            ),
+            None,
+        )
 
         response = test_client.get(
             "/",
@@ -202,7 +207,10 @@ class TestLoginRedirect:
     @patch("app.api.auth.get_authorization_url")
     def test_login_redirects_to_workos(self, mock_url, test_client):
         """GET /api/auth/login should redirect to WorkOS."""
-        mock_url.return_value = ("https://authkit.workos.com/authorize?id=test", "state_abc")
+        mock_url.return_value = (
+            "https://authkit.workos.com/authorize?id=test",
+            "state_abc",
+        )
 
         response = test_client.get("/api/auth/login", follow_redirects=False)
 
@@ -212,7 +220,10 @@ class TestLoginRedirect:
     @patch("app.api.auth.get_authorization_url")
     def test_login_with_provider_passes_provider(self, mock_url, test_client):
         """GET /api/auth/login?provider=GitHubOAuth should pass provider."""
-        mock_url.return_value = ("https://authkit.workos.com/authorize?p=github", "state_xyz")
+        mock_url.return_value = (
+            "https://authkit.workos.com/authorize?p=github",
+            "state_xyz",
+        )
 
         response = test_client.get(
             "/api/auth/login?provider=GitHubOAuth&scope=repo",

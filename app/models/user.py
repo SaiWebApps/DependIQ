@@ -43,7 +43,8 @@ class User(Base):
         String(255), unique=True, nullable=False, index=True
     )
     password_hash: Mapped[str | None] = mapped_column(
-        String(255), nullable=True  # Kept nullable for migration safety; no longer used
+        String(255),
+        nullable=True,  # Kept nullable for migration safety; no longer used
     )
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 

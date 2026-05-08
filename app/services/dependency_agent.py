@@ -17,6 +17,7 @@ from typing import Any
 from ..models.dependency import Dependency
 from ..models.exclusions import ArtifactExclusionConfig
 from .llm import Agent, TaskType
+from .llm.prompts import TaskPromptManager, get_task_prompt_manager
 
 logger = logging.getLogger(__name__)
 
@@ -30,14 +31,34 @@ SYSTEM_PROMPT = (
 _MAX_STRUCTURE_SUMMARY = 50
 _MAX_DIRECTORIES = 30
 _MAX_PRIORITY_FILES = 15
-_ANALYZABLE_EXTENSIONS = frozenset({
-    ".scala", ".java", ".py", ".sbt", ".gradle", ".kts",
-    ".xml", ".conf", ".properties", ".yml", ".yaml",
-})
-_EXCLUDED_PATH_SEGMENTS = frozenset({
-    "target/", "build/", ".gradle/", "__pycache__/", ".git/",
-    "node_modules/", ".idea/", ".vscode/", ".settings/",
-})
+_ANALYZABLE_EXTENSIONS = frozenset(
+    {
+        ".scala",
+        ".java",
+        ".py",
+        ".sbt",
+        ".gradle",
+        ".kts",
+        ".xml",
+        ".conf",
+        ".properties",
+        ".yml",
+        ".yaml",
+    }
+)
+_EXCLUDED_PATH_SEGMENTS = frozenset(
+    {
+        "target/",
+        "build/",
+        ".gradle/",
+        "__pycache__/",
+        ".git/",
+        "node_modules/",
+        ".idea/",
+        ".vscode/",
+        ".settings/",
+    }
+)
 
 # Maximum length for dependency name/version strings in prompts
 _MAX_DEP_FIELD_LENGTH = 256
@@ -61,6 +82,13 @@ class DependencyAgent:
     """High-level agent for DependIQ dependency analysis tasks."""
 
     agent: Agent = field(default_factory=Agent)
+    prompts: TaskPromptManager = field(default_factory=get_task_prompt_manager)
+
+    def _get_system_prompt(self, template_name: str, **variables) -> str:
+        """Load a task-specific prompt or fall back to the generic SYSTEM_PROMPT."""
+        if self.prompts.has_template(template_name):
+            return self.prompts.render(template_name, **variables)
+        return SYSTEM_PROMPT
 
     async def research_latest_versions(
         self,
@@ -132,7 +160,22 @@ Do not include any explanation, just the JSON object."""
         file_name: str,
     ) -> list[Dependency]:
         """Extract dependencies from a build file using LLM analysis."""
-        prompt = f"""Analyze this {project_type} build file ({file_name}) and extract ALL dependencies.
+        # Use task-specific template if available, otherwise fall back to inline prompt
+        system = self._get_system_prompt(
+            "extract_dependencies",
+            project_type=project_type,
+            file_name=file_name,
+            file_content=file_content,
+        )
+
+        # If template loaded, use a shorter user prompt since system has the details
+        if self.prompts.has_template("extract_dependencies"):
+            prompt = (
+                f"Extract all dependencies from the {project_type} build file "
+                f"({file_name}). Return the JSON array as specified."
+            )
+        else:
+            prompt = f"""Analyze this {project_type} build file ({file_name}) and extract ALL dependencies.
 
 Include:
 - Direct dependencies (libraries explicitly listed)
@@ -154,7 +197,7 @@ Return ONLY a JSON array:
         result = await self.agent.run(
             task=TaskType.DEPENDENCY_EXTRACT,
             prompt=prompt,
-            system=SYSTEM_PROMPT,
+            system=system,
         )
 
         return self._parse_dependency_response(result.content)
@@ -294,10 +337,14 @@ markdown fences, or surrounding text — just the raw file content ready to writ
 
         analyzable_files = self._filter_analyzable_files(project_files)
 
-        files_content = "\n".join(
-            f"=== {path} ===\n{content}"
-            for path, content in analyzable_files.items()
-        ) if analyzable_files else "# No analyzable source files found"
+        files_content = (
+            "\n".join(
+                f"=== {path} ===\n{content}"
+                for path, content in analyzable_files.items()
+            )
+            if analyzable_files
+            else "# No analyzable source files found"
+        )
 
         instructions_block = ""
         if user_instructions:
@@ -350,7 +397,8 @@ has already been updated separately."""
     ) -> dict:
         """Analyze dependencies for known security vulnerabilities."""
         dep_list = "\n".join(
-            f"- {_sanitize_dep_field(dep.name)}@{_sanitize_dep_field(dep.current_version)}" for dep in dependencies
+            f"- {_sanitize_dep_field(dep.name)}@{_sanitize_dep_field(dep.current_version)}"
+            for dep in dependencies
         )
 
         prompt = f"""Analyze these {project_type} dependencies for security vulnerabilities.
@@ -386,7 +434,11 @@ Return JSON:
         try:
             return json.loads(self._extract_json(result.content))
         except (json.JSONDecodeError, ValueError):
-            return {"vulnerable": [], "clean": [], "unknown": [d.name for d in dependencies]}
+            return {
+                "vulnerable": [],
+                "clean": [],
+                "unknown": [d.name for d in dependencies],
+            }
 
     # --- Private helpers ---
 
@@ -424,8 +476,12 @@ Return JSON:
 
         if len(analyzable) > _MAX_PRIORITY_FILES:
             priority = {
-                k: v for k, v in analyzable.items()
-                if any(k.endswith(ext) for ext in (".scala", ".java", ".py", ".sbt", ".gradle"))
+                k: v
+                for k, v in analyzable.items()
+                if any(
+                    k.endswith(ext)
+                    for ext in (".scala", ".java", ".py", ".sbt", ".gradle")
+                )
             }
             return dict(list(priority.items())[:_MAX_PRIORITY_FILES])
 
@@ -551,7 +607,9 @@ def update_dependency_file_with_gpt(
     """Sync wrapper for DependencyAgent.update_dependency_file."""
     agent = get_dependency_agent()
     return _run_sync(
-        agent.update_dependency_file(project_type, file_content, dependencies, file_name)
+        agent.update_dependency_file(
+            project_type, file_content, dependencies, file_name
+        )
     )
 
 
@@ -580,12 +638,17 @@ def update_entire_project_with_gpt_with_progress(
     from .progress_service import update_progress
 
     update_progress(
-        session_id, "Updating dependency file", 20, f"Updating {dep_file_name} with new versions"
+        session_id,
+        "Updating dependency file",
+        20,
+        f"Updating {dep_file_name} with new versions",
     )
 
     update_progress(
-        session_id, "Analyzing code compatibility", 50,
-        "AI is analyzing source files for breaking changes"
+        session_id,
+        "Analyzing code compatibility",
+        50,
+        "AI is analyzing source files for breaking changes",
     )
 
     agent = get_dependency_agent()

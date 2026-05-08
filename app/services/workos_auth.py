@@ -104,9 +104,7 @@ def seal_session(auth_response) -> str:
         refresh_token=auth_response.refresh_token,
         user=auth_response.user.to_dict(),
         impersonator=(
-            auth_response.impersonator.to_dict()
-            if auth_response.impersonator
-            else None
+            auth_response.impersonator.to_dict() if auth_response.impersonator else None
         ),
         cookie_password=Config.WORKOS_COOKIE_PASSWORD,
     )
@@ -114,7 +112,12 @@ def seal_session(auth_response) -> str:
 
 def verify_or_refresh_session(
     sealed_cookie: str,
-) -> tuple[AuthenticateWithSessionCookieSuccessResponse | RefreshWithSessionCookieSuccessResponse | None, str | None]:
+) -> tuple[
+    AuthenticateWithSessionCookieSuccessResponse
+    | RefreshWithSessionCookieSuccessResponse
+    | None,
+    str | None,
+]:
     """
     Verify a sealed session. If the JWT is expired, attempt refresh.
 
@@ -178,9 +181,7 @@ async def get_current_user_from_cookie(
     if not workos_user_id:
         return None
 
-    result = await db.execute(
-        select(User).where(User.workos_user_id == workos_user_id)
-    )
+    result = await db.execute(select(User).where(User.workos_user_id == workos_user_id))
     user = result.scalar_one_or_none()
 
     if not user or not user.is_active:
@@ -209,15 +210,11 @@ async def get_or_create_user(
     bitbucket_access_token: str | None = None,
 ) -> User:
     """Find existing user by WorkOS ID or email, or create a new one."""
-    result = await db.execute(
-        select(User).where(User.workos_user_id == workos_user_id)
-    )
+    result = await db.execute(select(User).where(User.workos_user_id == workos_user_id))
     user = result.scalar_one_or_none()
 
     if not user:
-        result = await db.execute(
-            select(User).where(User.email == email.lower())
-        )
+        result = await db.execute(select(User).where(User.email == email.lower()))
         user = result.scalar_one_or_none()
 
         if user:
