@@ -46,7 +46,7 @@ help:
 # === Primary targets — all standalone, zero manual setup required ===
 
 test: clean _check-uv _ensure-neo4j
-	@$(UV) run pytest tests/ test_prompt_templates.py --ignore=tests/selenium --assert=plain
+	@$(UV) run pytest tests/ test_prompt_templates.py --ignore=tests/selenium
 
 lint: _check-uv
 	@echo "Linting..."

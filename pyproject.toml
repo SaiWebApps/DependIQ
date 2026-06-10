@@ -157,7 +157,6 @@ addopts = [
     "-v",
     "--strict-markers",
     "--tb=short",
-    "--disable-warnings",
 ]
 markers = [
     "asyncio: mark test as async",
