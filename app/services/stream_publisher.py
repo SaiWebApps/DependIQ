@@ -43,7 +43,7 @@ async def complete_stream(task_id: str) -> None:
 async def subscribe(task_id: str) -> AsyncGenerator[str, None]:
     """Subscribe to a task's event stream. Yields SSE-formatted lines."""
     if task_id not in _streams:
-        yield "event: error\ndata: {\"type\": \"error\", \"content\": \"Stream not found\"}\n\n"
+        yield 'event: error\ndata: {"type": "error", "content": "Stream not found"}\n\n'
         return
     queue = _streams[task_id]
     while True:

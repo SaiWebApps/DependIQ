@@ -112,9 +112,7 @@ async def get_analysis_status(
             detail="Task not found",
         )
 
-    result = await db.execute(
-        select(AnalysisTask).where(AnalysisTask.id == task_uuid)
-    )
+    result = await db.execute(select(AnalysisTask).where(AnalysisTask.id == task_uuid))
     task = result.scalar_one_or_none()
 
     if not task:

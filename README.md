@@ -1,186 +1,102 @@
-# dependiq - AI-Powered Dependency Management
+# DependIQ — Dependency Intelligence
 
-Automatically analyze, research, and update dependencies in your projects using AI.
-
-## Features
-
-- 🎨 **7 Beautiful Themes** - Light, Dark, Ocean, Forest, Nord, Dracula, and System Auto themes
-- ♿ **Accessibility Features** - High contrast, colorblind modes, font sizes, reduce motion
-- Automatic project detection (Python, Java/Scala)
-- AI-powered dependency analysis and version research
-- Automated dependency updates with validation
-- GitHub integration for direct repository access
-- User authentication with JWT and OAuth (GitHub)
-- Project history tracking and preferences management
+Analyze cross-project dependencies, map blast radius, and generate automated code modifications when dependencies change.
 
 ## Quick Start
 
-### Prerequisites
-- Python 3.9+
-- PostgreSQL 14+
-- OpenAI API key
-
-### Setup
-
 ```bash
-# Install dependencies
-make install
-
-# Setup database
-make db-setup
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your OPENAI_API_KEY, DATABASE_URL, JWT_SECRET_KEY
-
-# Start application
-make run
-```
-
-Access the application at http://localhost:8000
-
-### Complete First-Time Setup
-
-```bash
-# One command to set up everything
+# First-time setup (installs deps, starts Postgres + Neo4j, creates DB)
 make setup
+
+# Run the server
+make run
+
+# Run tests
+make test
 ```
 
-This installs dependencies, configures the database, formats code, and installs pre-commit hooks.
+Every `make` target is self-sufficient — it starts whatever services it needs.
 
-## Usage
+### Prerequisites
 
-### Web Interface
+- [uv](https://docs.astral.sh/uv/) (Python package manager)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (for Neo4j)
+- PostgreSQL 14+ (`brew install postgresql@14` on macOS)
 
-1. Register/login at http://localhost:8000
-2. Upload project ZIP or connect GitHub repository
-3. Review AI-generated dependency updates
-4. Download updated project
+### Environment
 
-### API
+`make setup` auto-creates `.env` from `.env.example`. You'll need to fill in:
 
-Full API documentation available at http://localhost:8000/docs when the server is running.
-
-Example authentication flow:
 ```bash
-# Register
-curl -X POST http://localhost:8000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","password":"SecurePass123!","confirm_password":"SecurePass123!"}'
+WORKOS_API_KEY=sk_test_...       # From WorkOS dashboard
+WORKOS_CLIENT_ID=client_...      # From WorkOS dashboard
+ANTHROPIC_API_KEY=sk-ant-...     # For dependency analysis (or OPENAI_API_KEY)
+```
 
-# Login and get token
-curl -X POST http://localhost:8000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","password":"SecurePass123!"}'
+## Development
+
+```bash
+make test       # Run all tests (auto-starts Neo4j)
+make lint       # Check code (ruff)
+make format     # Auto-format (ruff)
+make run        # Start server on http://localhost:8000
+```
+
+### Database
+
+```bash
+make migrate    # Apply schema (create_all + migrations.sql)
+make db-status  # Show service + table info
+make db-reset   # Drop and recreate (destructive, prompts for confirmation)
+```
+
+### Neo4j
+
+```bash
+make neo4j-start   # Start test Neo4j via Docker
+make neo4j-stop    # Stop Neo4j
+make neo4j-status  # Show container status
+```
+
+### Render Deployment
+
+```bash
+make render ARGS='services list'    # Render CLI (proxy-bypassed)
+make render ARGS='logs --resources srv-... --limit 20 --confirm'
+```
+
+## Architecture
+
+- **Backend**: FastAPI + SQLAlchemy async + PostgreSQL + Neo4j
+- **Frontend**: Jinja2 + HTMX + Tailwind CSS + Alpine.js (no React/build step)
+- **Auth**: WorkOS AuthKit (GitHub, Google, Email OAuth)
+- **LLM**: litellm (provider-agnostic — Claude, GPT, Ollama)
+- **Graph**: Neo4j for cross-project dependency relationships + blast radius
+
+## Project Structure
+
+```
+app/
+  api/           — FastAPI routers (auth, workspaces, graph, blast_radius, etc.)
+  models/        — SQLAlchemy models (User, Workspace, ProjectLibrary, etc.)
+  graph/         — Neo4j connection + GraphService
+  services/      — Pipeline, blast radius, relationships, LLM agent
+  services/llm/  — Agent loop, model router, prompt templates
+templates/       — Jinja2 (base.html, sign_in.html, workspaces.html)
+tests/           — pytest suite
+docker-compose.yml — Neo4j test instance
+Makefile         — All dev commands (self-sufficient targets)
 ```
 
 ## Supported Projects
 
 - **Python**: `requirements.txt`, `pyproject.toml`
-- **Java**: `pom.xml` (Maven), `build.gradle` (Gradle)
-- **Scala**: `build.sbt` (SBT)
-
-## Configuration
-
-### Required Environment Variables
-```bash
-OPENAI_API_KEY=sk-...                                    # OpenAI API key
-DATABASE_URL=postgresql+asyncpg://localhost/dependiq      # Database URL
-JWT_SECRET_KEY=$(python -c "import secrets; print(secrets.token_urlsafe(32))")
-```
-
-### Optional Configuration
-```bash
-# GitHub OAuth
-GITHUB_CLIENT_ID=your_client_id
-GITHUB_CLIENT_SECRET=your_client_secret
-
-# Email (SendGrid recommended)
-EMAIL_SERVICE=sendgrid
-SENDGRID_API_KEY=your_api_key
-EMAIL_FROM=noreply@yourdomain.com
-
-# Security (production only)
-SECURE_COOKIES=true
-```
-
-Setup GitHub OAuth with: `make github`
-
-## Development
-
-### Testing
-```bash
-make test              # Run all tests
-make test-unit         # Unit tests only
-make test-integration  # Integration tests only
-make test-coverage     # With coverage report
-```
-
-See [`docs/TESTING.md`](docs/TESTING.md) for comprehensive testing documentation.
-
-### Code Quality
-```bash
-make format     # Format with black, isort, ruff
-make lint       # Run linter
-make typecheck  # Type checking
-make quality    # Run all checks
-```
-
-### Database Management
-```bash
-make db-status   # Check database status
-make db-migrate  # Apply migrations
-make db-reset    # Reset database (⚠️ deletes data)
-```
-
-See [`docs/DATABASE.md`](docs/DATABASE.md) for detailed database documentation.
-
-## Common Tasks
-
-```bash
-make help        # Show all available commands
-make setup       # Complete project setup
-make run         # Start the application
-make quality     # Run all code quality checks
-make clean       # Clean up generated files
-```
-
-## Troubleshooting
-
-**Database issues**: Run `make db-status` to diagnose and `make db-reset` to reset (⚠️ deletes data)
-
-**Dependency issues**: Run `make install` to reinstall dependencies
-
-**Test failures**: See [`docs/TESTING.md`](docs/TESTING.md) for debugging steps
+- **Java/Scala**: `pom.xml`, `build.gradle`, `build.sbt`
 
 ## Documentation
 
-- [`docs/DATABASE.md`](docs/DATABASE.md) - Database setup and management
-- [`docs/TESTING.md`](docs/TESTING.md) - Testing guide and coverage
-- [`docs/themes.md`](docs/themes.md) - Theme customization guide
-- [`docs/accessibility.md`](docs/accessibility.md) - Accessibility features guide
-- [`docs/testing_themes.md`](docs/testing_themes.md) - Theme testing guide
-- [`docs/design/`](docs/design/) - Architecture documentation
+- [`docs/database.md`](docs/database.md) — Schema and migration system
+- [`docs/testing.md`](docs/testing.md) — Test strategy
+- [`docs/themes.md`](docs/themes.md) — Theme system
+- [`docs/accessibility.md`](docs/accessibility.md) — Accessibility features
 - API docs: http://localhost:8000/docs (when running)
-
-## Project Structure
-
-```
-dependiq/
-├── app/
-│   ├── api/          # API endpoints
-│   ├── middleware/   # Auth & error handling
-│   ├── models/       # Database models
-│   ├── services/     # Business logic
-│   └── utils/        # Utilities
-├── alembic/          # Database migrations
-├── prompts/          # AI prompts
-├── static/           # Frontend assets
-├── templates/        # HTML templates
-├── tests/            # Test suite
-└── Makefile          # Development commands
-```
-
----
-
-Built with FastAPI, OpenAI, and PostgreSQL

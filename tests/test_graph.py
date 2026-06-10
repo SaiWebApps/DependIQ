@@ -274,17 +274,17 @@ async def test_graph_service_get_workspace_graph():
                 },
                 "deps": [
                     {
-                        "package": {
-                            "name": "react",
-                            "ecosystem": "npm",
-                        },
-                        "edge": {"version": "18.2.0"},
+                        "pkg_name": "react",
+                        "pkg_ecosystem": "npm",
+                        "dep_version": "18.2.0",
+                        "dep_is_direct": True,
                     }
                 ],
                 "rels": [
                     {
-                        "target": {"id": "proj-2", "name": "backend"},
-                        "edge": {"type": "calls_api", "confidence": 0.9},
+                        "target_id": "proj-2",
+                        "rel_type": "calls_api",
+                        "rel_confidence": 0.9,
                     }
                 ],
             },
@@ -297,14 +297,13 @@ async def test_graph_service_get_workspace_graph():
                 },
                 "deps": [
                     {
-                        "package": {
-                            "name": "fastapi",
-                            "ecosystem": "pypi",
-                        },
-                        "edge": {"version": "0.111.0"},
+                        "pkg_name": "fastapi",
+                        "pkg_ecosystem": "pypi",
+                        "dep_version": "0.111.0",
+                        "dep_is_direct": True,
                     }
                 ],
-                "rels": [{"target": None, "edge": None}],
+                "rels": [{"target_id": None, "rel_type": None, "rel_confidence": None}],
             },
         ]
     )
@@ -499,7 +498,9 @@ async def test_graph_api_blast_radius_service_unavailable(
     from main import app
 
     mock_service = AsyncMock(spec=BlastRadiusService)
-    mock_service.compute_blast_radius.side_effect = Exception("Neo4j connection refused")
+    mock_service.compute_blast_radius.side_effect = Exception(
+        "Neo4j connection refused"
+    )
 
     app.dependency_overrides[get_blast_radius_service] = lambda: mock_service
 

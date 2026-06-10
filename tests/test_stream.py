@@ -317,14 +317,22 @@ class TestEventRendering:
         assert "border-emerald-700" in html
 
     def test_render_error(self):
-        event = {"type": "error", "content": "Rate limited", "data": {"error": "Rate limited"}}
+        event = {
+            "type": "error",
+            "content": "Rate limited",
+            "data": {"error": "Rate limited"},
+        }
         html = _render_event_html(event)
         assert "Error" in html
         assert "Rate limited" in html
         assert "border-red-700" in html
 
     def test_render_escapes_html(self):
-        event = {"type": "thinking", "content": "<script>alert('xss')</script>", "data": {}}
+        event = {
+            "type": "thinking",
+            "content": "<script>alert('xss')</script>",
+            "data": {},
+        }
         html = _render_event_html(event)
         assert "<script>" not in html
         assert "&lt;script&gt;" in html

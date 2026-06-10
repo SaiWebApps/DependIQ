@@ -125,8 +125,18 @@ class GraphService:
         MATCH (p:Project {workspace_id: $workspace_id})
         OPTIONAL MATCH (p)-[d:DEPENDS_ON]->(pkg:Package)
         OPTIONAL MATCH (p)-[r:RELATES_TO]->(other:Project {workspace_id: $workspace_id})
-        RETURN p, collect(DISTINCT {package: pkg, edge: d}) as deps,
-               collect(DISTINCT {target: other, edge: r}) as rels
+        RETURN p,
+               collect(DISTINCT {
+                   pkg_name: pkg.name,
+                   pkg_ecosystem: pkg.ecosystem,
+                   dep_version: d.version,
+                   dep_is_direct: d.is_direct
+               }) as deps,
+               collect(DISTINCT {
+                   target_id: other.id,
+                   rel_type: r.type,
+                   rel_confidence: r.confidence
+               }) as rels
         """
         async with self.driver.session() as session:
             result = await session.run(query, workspace_id=workspace_id)
@@ -148,35 +158,32 @@ class GraphService:
             )
 
             for dep in record["deps"]:
-                if dep["package"]:
-                    pkg = dep["package"]
-                    pkg_id = f"{pkg['ecosystem']}:{pkg['name']}"
+                if dep["pkg_name"]:
+                    pkg_id = f"{dep['pkg_ecosystem']}:{dep['pkg_name']}"
                     if pkg_id not in packages:
                         packages[pkg_id] = {
                             "id": pkg_id,
-                            "name": pkg["name"],
-                            "ecosystem": pkg["ecosystem"],
+                            "name": dep["pkg_name"],
+                            "ecosystem": dep["pkg_ecosystem"],
                             "type": "package",
                         }
-                    edge_data = dep["edge"]
                     edges.append(
                         {
                             "source": proj["id"],
                             "target": pkg_id,
                             "type": "depends_on",
-                            "version": edge_data.get("version"),
+                            "version": dep.get("dep_version"),
                         }
                     )
 
             for rel in record["rels"]:
-                if rel["target"]:
-                    edge_data = rel["edge"]
+                if rel["target_id"]:
                     edges.append(
                         {
                             "source": proj["id"],
-                            "target": rel["target"]["id"],
-                            "type": edge_data.get("type", "relates_to"),
-                            "confidence": edge_data.get("confidence"),
+                            "target": rel["target_id"],
+                            "type": rel.get("rel_type", "relates_to"),
+                            "confidence": rel.get("rel_confidence"),
                         }
                     )
 
@@ -235,6 +242,40 @@ class GraphService:
             affected_projects=affected,
             total_affected=len(affected),
         )
+
+    async def get_relationships(self) -> list[GraphRelationship]:
+        """Get all inter-project relationships from the graph."""
+        query = """
+        MATCH (src:Project)-[r:RELATES_TO]->(tgt:Project)
+        RETURN src.id as source_project_id, tgt.id as target_project_id,
+               r.type as relationship_type, r.confidence as confidence,
+               r.metadata as metadata
+        """
+        async with self.driver.session() as session:
+            result = await session.run(query)
+            records = await result.data()
+
+        relationships = []
+        for record in records:
+            metadata = record.get("metadata") or "{}"
+            if isinstance(metadata, str):
+                try:
+                    import ast
+
+                    metadata = ast.literal_eval(metadata)
+                except (ValueError, SyntaxError):
+                    metadata = {}
+            relationships.append(
+                GraphRelationship(
+                    source_project_id=record["source_project_id"],
+                    target_project_id=record["target_project_id"],
+                    relationship_type=record.get("relationship_type", "relates_to"),
+                    confidence=record.get("confidence", 1.0),
+                    metadata=metadata if isinstance(metadata, dict) else {},
+                )
+            )
+
+        return relationships
 
     async def clear_workspace(self, workspace_id: str) -> None:
         """Delete all nodes/edges for a workspace (for re-analysis)."""

@@ -63,7 +63,7 @@ def _render_event_html(event: dict) -> str:
         name = _escape(data.get("name", "unknown"))
         return (
             f'<div class="flex items-center gap-2 text-xs text-emerald-400">'
-            f'<span>&#10003;</span> {name} complete</div>'
+            f"<span>&#10003;</span> {name} complete</div>"
         )
 
     elif event_type == "progress":
@@ -77,7 +77,7 @@ def _render_event_html(event: dict) -> str:
             f'<div class="bg-slate-800 rounded-lg p-4 border border-emerald-700">'
             f'<h3 class="text-emerald-400 text-sm font-medium mb-2">Analysis Complete</h3>'
             f'<div class="text-slate-300 text-sm whitespace-pre-wrap">{_escape(content)}</div>'
-            f'</div>'
+            f"</div>"
         )
 
     elif event_type == "error":
@@ -85,7 +85,7 @@ def _render_event_html(event: dict) -> str:
             f'<div class="bg-red-900/20 rounded-lg p-4 border border-red-700">'
             f'<h3 class="text-red-400 text-sm font-medium mb-2">Error</h3>'
             f'<div class="text-red-300 text-sm">{_escape(content)}</div>'
-            f'</div>'
+            f"</div>"
         )
 
     return ""

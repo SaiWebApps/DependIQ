@@ -23,6 +23,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import AsyncSessionLocal
+from ..graph.service import GraphDependency, GraphProject, get_graph_service
 from ..models.analysis_task import AnalysisTask
 from ..models.project_library import ProjectLibrary
 from ..utils.project_utils import collect_sbt_files, detect_project_type
@@ -479,6 +480,57 @@ class AnalysisPipeline:
             for d in updated
         ]
 
+    @staticmethod
+    def _ecosystem_for_project_type(project_type: str) -> str:
+        mapping = {
+            "python": "pypi",
+            "maven": "maven",
+            "gradle": "maven",
+            "sbt": "maven",
+            "node": "npm",
+        }
+        return mapping.get(project_type, "unknown")
+
+    async def _sync_to_graph(
+        self,
+        project_id: uuid.UUID,
+        workspace_id: uuid.UUID | None,
+        user_id: uuid.UUID,
+        project_name: str,
+        project_type: str,
+        dependencies: list[dict],
+    ) -> None:
+        if workspace_id is None:
+            logger.info("Skipping graph sync for project %s: no workspace", project_id)
+            return
+
+        try:
+            graph = await get_graph_service()
+            ecosystem = self._ecosystem_for_project_type(project_type)
+
+            await graph.write_project(
+                GraphProject(
+                    id=str(project_id),
+                    workspace_id=str(workspace_id),
+                    tenant_id=str(user_id),
+                    name=project_name,
+                    language=project_type,
+                )
+            )
+
+            graph_deps = [
+                GraphDependency(
+                    project_id=str(project_id),
+                    package_name=d["name"],
+                    ecosystem=ecosystem,
+                    version=d.get("current_version", ""),
+                )
+                for d in dependencies
+            ]
+            await graph.write_dependencies(str(project_id), graph_deps)
+        except Exception as e:
+            logger.warning("Graph sync failed for project %s: %s", project_id, e)
+
     async def _persist_results(
         self,
         project_id: uuid.UUID,
@@ -513,6 +565,15 @@ class AnalysisPipeline:
             }
 
             await db.commit()
+
+            await self._sync_to_graph(
+                project_id=project_id,
+                workspace_id=project.workspace_id,
+                user_id=project.user_id,
+                project_name=project.project_name,
+                project_type=project_type,
+                dependencies=dependencies,
+            )
 
     async def _update_task(self, task_id: str, **kwargs) -> None:
         """Update an AnalysisTask record with the given fields."""

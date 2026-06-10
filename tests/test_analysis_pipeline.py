@@ -520,9 +520,7 @@ class TestTaskStatusUpdates:
                 side_effect=RuntimeError("Network unreachable"),
             ),
         ):
-            await pipeline._run_analysis(
-                task_id, project_snapshot, "ghp_test_token"
-            )
+            await pipeline._run_analysis(task_id, project_snapshot, "ghp_test_token")
 
         # Check that task is marked failed
         await test_db_session.refresh(task)

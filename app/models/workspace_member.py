@@ -55,9 +55,7 @@ class WorkspaceMember(Base):
     )
 
     # Relationships
-    workspace: Mapped["Workspace"] = relationship(
-        "Workspace", back_populates="members"
-    )
+    workspace: Mapped["Workspace"] = relationship("Workspace", back_populates="members")
     user: Mapped["User"] = relationship("User")
 
     def __repr__(self) -> str:

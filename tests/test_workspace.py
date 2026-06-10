@@ -117,9 +117,7 @@ class TestGetWorkspaceDetail:
         ws_id = create_resp.json()["id"]
 
         # Get detail
-        response = test_client.get(
-            f"/api/workspaces/{ws_id}", headers=auth_headers
-        )
+        response = test_client.get(f"/api/workspaces/{ws_id}", headers=auth_headers)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -135,17 +133,13 @@ class TestGetWorkspaceDetail:
     def test_get_workspace_not_found(self, test_client, auth_headers):
         """Returns 404 for non-existent workspace"""
         fake_id = str(uuid.uuid4())
-        response = test_client.get(
-            f"/api/workspaces/{fake_id}", headers=auth_headers
-        )
+        response = test_client.get(f"/api/workspaces/{fake_id}", headers=auth_headers)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_get_workspace_invalid_id(self, test_client, auth_headers):
         """Returns 400 for invalid UUID"""
-        response = test_client.get(
-            "/api/workspaces/not-a-uuid", headers=auth_headers
-        )
+        response = test_client.get("/api/workspaces/not-a-uuid", headers=auth_headers)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
@@ -201,9 +195,7 @@ class TestDeleteWorkspace:
         ws_id = create_resp.json()["id"]
 
         # Delete
-        response = test_client.delete(
-            f"/api/workspaces/{ws_id}", headers=auth_headers
-        )
+        response = test_client.delete(f"/api/workspaces/{ws_id}", headers=auth_headers)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -211,9 +203,7 @@ class TestDeleteWorkspace:
         assert data["workspace_id"] == ws_id
 
         # Verify it's gone
-        get_resp = test_client.get(
-            f"/api/workspaces/{ws_id}", headers=auth_headers
-        )
+        get_resp = test_client.get(f"/api/workspaces/{ws_id}", headers=auth_headers)
         assert get_resp.status_code == status.HTTP_404_NOT_FOUND
 
     def test_delete_workspace_not_found(self, test_client, auth_headers):

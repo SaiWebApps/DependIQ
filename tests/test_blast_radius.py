@@ -477,8 +477,18 @@ class TestBlastRadiusAPI:
             "from_version": "2.0.30",
             "to_version": "2.0.36",
             "affected_projects": [
-                {"project_id": "p1", "name": "api-gateway", "distance": 1, "impact_type": "direct"},
-                {"project_id": "p2", "name": "worker", "distance": 2, "impact_type": "indirect"},
+                {
+                    "project_id": "p1",
+                    "name": "api-gateway",
+                    "distance": 1,
+                    "impact_type": "direct",
+                },
+                {
+                    "project_id": "p2",
+                    "name": "worker",
+                    "distance": 2,
+                    "impact_type": "indirect",
+                },
             ],
             "total_affected": 2,
             "computed_at": "2026-05-08T00:00:00",
@@ -498,7 +508,9 @@ class TestBlastRadiusAPI:
                 headers=auth_headers,
             )
 
-            assert response.status_code == 200, f"Got {response.status_code}: {response.text}"
+            assert response.status_code == 200, (
+                f"Got {response.status_code}: {response.text}"
+            )
             data = response.json()
             assert data["package"] == "sqlalchemy"
             assert data["ecosystem"] == "pypi"

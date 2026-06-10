@@ -373,7 +373,9 @@ class TestDetectRelationships:
     """Tests for the full detect_relationships orchestration."""
 
     @pytest.mark.asyncio
-    async def test_creates_job_and_completes(self, test_db_session, user_with_projects, neo4j_graph_service):
+    async def test_creates_job_and_completes(
+        self, test_db_session, user_with_projects, neo4j_graph_service
+    ):
         """detect_relationships should update job status through to completion."""
         user, _projects = user_with_projects
 
@@ -430,7 +432,9 @@ class TestDetectRelationships:
         assert results == []
 
     @pytest.mark.asyncio
-    async def test_calls_llm_for_each_pair(self, test_db_session, user_with_projects, neo4j_graph_service):
+    async def test_calls_llm_for_each_pair(
+        self, test_db_session, user_with_projects, neo4j_graph_service
+    ):
         """LLM should be called for each project pair (N*(N-1)/2 calls)."""
         user, _projects = user_with_projects  # 3 projects -> 3 pairs
 
@@ -490,7 +494,9 @@ class TestDetectRelationships:
         assert len(api_rels) > 0
 
     @pytest.mark.asyncio
-    async def test_publishes_progress_events(self, test_db_session, user_with_projects, neo4j_graph_service):
+    async def test_publishes_progress_events(
+        self, test_db_session, user_with_projects, neo4j_graph_service
+    ):
         """Progress events should be emitted during analysis."""
         user, _projects = user_with_projects
 

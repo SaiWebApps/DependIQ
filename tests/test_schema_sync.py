@@ -28,7 +28,16 @@ from app.models import (
 MIGRATIONS_SQL = Path(__file__).resolve().parent.parent / "migrations.sql"
 
 # Reference models to ensure they are registered with Base.metadata
-_MODELS = (User, UserPreference, ProjectLibrary, ProjectHistory, Job, Dependency, Workspace, WorkspaceMember)
+_MODELS = (
+    User,
+    UserPreference,
+    ProjectLibrary,
+    ProjectHistory,
+    Job,
+    Dependency,
+    Workspace,
+    WorkspaceMember,
+)
 
 
 def _get_test_engine():
@@ -51,8 +60,7 @@ def _parse_migrations_sql() -> list[str]:
     sql_content = MIGRATIONS_SQL.read_text().strip()
     # Remove comment lines
     lines = [
-        line for line in sql_content.splitlines()
-        if not line.strip().startswith("--")
+        line for line in sql_content.splitlines() if not line.strip().startswith("--")
     ]
     # Join and split by semicolons
     full_sql = "\n".join(lines)
@@ -96,7 +104,11 @@ async def test_migrations_sql_runs_cleanly_on_fresh_db():
                     # Allow: table already exists
                     if not any(
                         token in err_msg
-                        for token in ("duplicate column", "syntax error", "already exists")
+                        for token in (
+                            "duplicate column",
+                            "syntax error",
+                            "already exists",
+                        )
                     ):
                         raise
 
@@ -140,7 +152,11 @@ async def test_no_orphaned_migrations():
                     err_msg = str(e).lower()
                     if not any(
                         token in err_msg
-                        for token in ("duplicate column", "syntax error", "already exists")
+                        for token in (
+                            "duplicate column",
+                            "syntax error",
+                            "already exists",
+                        )
                     ):
                         raise
 

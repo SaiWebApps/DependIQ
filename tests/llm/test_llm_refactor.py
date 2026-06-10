@@ -113,7 +113,9 @@ def agent(simple_registry, monkeypatch):
 def prompt_manager():
     """TaskPromptManager pointed at the real templates directory."""
     # tests/llm/test_llm_refactor.py -> tests/llm -> tests -> project root
-    template_dir = Path(__file__).parent.parent.parent / "app" / "services" / "llm" / "prompts"
+    template_dir = (
+        Path(__file__).parent.parent.parent / "app" / "services" / "llm" / "prompts"
+    )
     return TaskPromptManager(template_dir=template_dir)
 
 

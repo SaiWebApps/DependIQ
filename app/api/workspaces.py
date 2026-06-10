@@ -234,9 +234,7 @@ async def update_workspace(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid workspace ID"
         )
 
-    result = await db.execute(
-        select(Workspace).where(Workspace.id == ws_uuid)
-    )
+    result = await db.execute(select(Workspace).where(Workspace.id == ws_uuid))
     workspace = result.scalar_one_or_none()
 
     if not workspace:
@@ -279,9 +277,7 @@ async def delete_workspace(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid workspace ID"
         )
 
-    result = await db.execute(
-        select(Workspace).where(Workspace.id == ws_uuid)
-    )
+    result = await db.execute(select(Workspace).where(Workspace.id == ws_uuid))
     workspace = result.scalar_one_or_none()
 
     if not workspace:

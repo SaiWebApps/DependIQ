@@ -59,6 +59,7 @@ target-version = "py311"
 exclude = [
     ".git",
     ".venv",
+    ".claude",
     "__pycache__",
     "build",
     "dist",
