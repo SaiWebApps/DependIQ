@@ -1,6 +1,7 @@
-.PHONY: help test lint format run setup clean migrate db-start db-stop db-reset db-status render neo4j-start neo4j-stop neo4j-status
+.PHONY: help test lint format run setup clean migrate db-start db-stop db-reset db-status render neo4j-start neo4j-stop neo4j-status auth-check
 
 UV := uv
+BASE_URL ?= http://localhost:8000
 
 # Detect OS for platform-specific commands
 UNAME_S := $(shell uname -s)
@@ -70,6 +71,11 @@ clean:
 	@find . -depth -type d -name ".pytest_cache" -exec rm -rf {} +
 	@find . -depth -type d -name ".mypy_cache" -exec rm -rf {} +
 	@find . -depth -type d -name ".ruff_cache" -exec rm -rf {} +
+
+# === Verification ===
+
+auth-check:
+	@./scripts/auth_check.sh $(BASE_URL)
 
 # === Database schema ===
 
