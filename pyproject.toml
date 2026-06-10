@@ -145,16 +145,23 @@ ignore_errors = true
 module = "app.services.*"
 ignore_errors = true
 
+# Single source of pytest config (pytest.ini deleted in the same commit —
+# pytest only reads this section when no pytest.ini exists).
 [tool.pytest.ini_options]
-testpaths = ["."]
-python_files = ["test_*.py", "*_test.py"]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
 python_functions = ["test_*"]
+asyncio_mode = "auto"
 addopts = [
-    "--verbose",
-    "--tb=short",
+    "-v",
     "--strict-markers",
+    "--tb=short",
+    "--disable-warnings",
 ]
 markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-    "integration: marks tests as integration tests",
+    "asyncio: mark test as async",
+    "integration: mark test as integration test",
+    "unit: mark test as unit test",
+    "slow: mark test as slow running",
 ]
