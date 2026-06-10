@@ -29,11 +29,14 @@ def record(cid: str, verdict: str, evidence: str) -> None:
     print(textwrap.indent(evidence.strip(), "    "))
 
 
-def main() -> None:  # noqa: C901
+def main() -> None:
     # ----------------------------------------------------------------- C1
-    # Claim: workspaces.html POSTs {} but API requires `name` -> 422
+    # Was: workspaces.html POSTs {} -> 422 (the shipped bug). FIXED in S2.1.
+    # Now asserts the fixed state: template sends a name, API still rejects
+    # empty bodies with 422 (validation intact).
     tpl = (ROOT / "templates/workspaces.html").read_text()
     sends_empty = "JSON.stringify({})" in tpl
+    sends_name = "JSON.stringify({ name: name })" in tpl
 
     from fastapi.testclient import TestClient
 
@@ -44,13 +47,13 @@ def main() -> None:  # noqa: C901
     client = TestClient(app, raise_server_exceptions=False)
     r = client.post("/api/workspaces/", json={})
     app.dependency_overrides.clear()
-    verdict = "CONFIRMED" if (sends_empty and r.status_code == 422) else "REFUTED"
+    verdict = "CONFIRMED" if (not sends_empty and sends_name and r.status_code == 422) else "REFUTED"
     record(
-        "C1 workspace creation broken",
+        "C1 workspace create contract honoured (bug fixed in S2.1)",
         verdict,
-        f"template sends JSON.stringify({{}}): {sends_empty}\n"
-        f"REAL request POST /api/workspaces/ with body {{}} -> HTTP {r.status_code}\n"
-        f"response: {r.text[:120]}",
+        f"template sends empty body: {sends_empty} (was True pre-S2.1)\n"
+        f"template sends {{name}}: {sends_name}\n"
+        f"REAL request POST /api/workspaces/ with {{}} still rejected -> HTTP {r.status_code}",
     )
 
     # ----------------------------------------------------------------- C2
@@ -62,15 +65,13 @@ def main() -> None:  # noqa: C901
     client = TestClient(app, raise_server_exceptions=False)
     r2 = client.get("/api/workspaces/", headers={"Authorization": "Bearer null"})
     bearer_rejected = r2.status_code in (303, 401, 403)
-    pattern_present = all(counts[f] >= 1 for f in ("projects.html", "jobs.html", "history.html"))
-    clean_pages = counts["base.html"] == 0 and counts["workspaces.html"] == 0
+    all_clean = all(c == 0 for c in counts.values())
     record(
-        "C2 Bearer-token-from-localStorage is dead auth",
-        "CONFIRMED" if (bearer_rejected and pattern_present and clean_pages) else "REFUTED",
-        f"access_token reads per template: {counts}\n"
-        "(docs said projects.html had 7 — exact count is 6; the 7th localStorage read\n"
-        " is sidebarCollapsed at projects.html:865. Claim substance unchanged.)\n"
-        f"REAL request with 'Authorization: Bearer null', no cookie -> HTTP {r2.status_code} (not 200)",
+        "C2 localStorage-Bearer pattern eradicated (S1.1-S1.4; was 11 sites)",
+        "CONFIRMED" if (bearer_rejected and all_clean) else "REFUTED",
+        f"access_token reads per template (all must be 0): {counts}\n"
+        f"REAL request with 'Authorization: Bearer null', no cookie -> HTTP {r2.status_code} (not 200)\n"
+        "(also enforced by tests/auth/test_auth_invariants.py — zero tolerance)",
     )
 
     # ----------------------------------------------------------------- C3
@@ -162,17 +163,18 @@ def main() -> None:  # noqa: C901
     )
 
     # ----------------------------------------------------------------- C8
-    # Claim: two pytest configs exist; pytest.ini wins.
-    both = (ROOT / "pytest.ini").exists() and "[tool.pytest.ini_options]" in (ROOT / "pyproject.toml").read_text()
-    out = subprocess.run(
+    # Was: two pytest configs that disagreed, pytest.ini silently winning.
+    # FIXED in S4.1: single source. Now asserts the fixed state.
+    single = not (ROOT / "pytest.ini").exists() and "[tool.pytest.ini_options]" in (ROOT / "pyproject.toml").read_text()
+    out = subprocess.run(  # noqa: S603 — fixed args, our own interpreter
         [PY, "-m", "pytest", "tests/test_utils.py", "--collect-only", "-p", "no:cacheprovider"],
         capture_output=True, text=True, cwd=ROOT, timeout=60,
     ).stdout
     cfg_line = next((line for line in out.splitlines() if "configfile" in line), "<none>")
     record(
-        "C8 dual pytest config, pytest.ini wins",
-        "CONFIRMED" if (both and "pytest.ini" in cfg_line) else "REFUTED",
-        f"both config blocks present: {both}\npytest reports: {cfg_line.strip()}",
+        "C8 single pytest config (fixed in S4.1)",
+        "CONFIRMED" if (single and "pyproject.toml" in cfg_line) else "REFUTED",
+        f"pytest.ini deleted, pyproject block present: {single}\npytest reports: {cfg_line.strip()}",
     )
 
     # ----------------------------------------------------------------- C9
@@ -183,11 +185,11 @@ def main() -> None:  # noqa: C901
     snippet = tmpdir / "test_assert_demo.py"
     snippet.write_text("def test_demo():\n    x = 2\n    assert x == 3\n")
     try:
-        plain = subprocess.run(
+        plain = subprocess.run(  # noqa: S603 — fixed args, our own interpreter
             [PY, "-m", "pytest", str(snippet), "--assert=plain", "-q", "-p", "no:cacheprovider"],
             capture_output=True, text=True, cwd=ROOT, timeout=60,
         ).stdout
-        rich = subprocess.run(
+        rich = subprocess.run(  # noqa: S603 — fixed args, our own interpreter
             [PY, "-m", "pytest", str(snippet), "-q", "-p", "no:cacheprovider"],
             capture_output=True, text=True, cwd=ROOT, timeout=60,
         ).stdout
