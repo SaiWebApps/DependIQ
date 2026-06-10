@@ -10,19 +10,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 
-# ---------------------------------------------------------------------------
-# Ratchet: templates still using the dead localStorage-Bearer auth pattern.
-# The app authenticates with WorkOS sealed cookies; localStorage never holds
-# a token, so `Authorization: Bearer null` is sent and every call 401s.
-#
-# Plan steps S1.1-S1.3 drive these counts to zero, S1.4 deletes this dict.
-# - A count INCREASE means someone reintroduced the nightmare pattern: fix
-#   the template, never this number.
-# - A count DECREASE means you fixed some: lower the number here in the
-#   same commit so the ratchet stays tight.
-# ---------------------------------------------------------------------------
-LOCALSTORAGE_TOKEN_ALLOWLIST = {}
-
 TOKEN_PATTERN = "localStorage.getItem('access_token')"
 
 
@@ -56,27 +43,23 @@ def test_every_cookie_call_sets_path_root():
     )
 
 
-def test_no_new_localstorage_token_usage():
+def test_no_localstorage_token_usage_anywhere():
     """Memory lesson (this session): localStorage Bearer auth is dead code.
 
-    The allowlist documents the known offenders being burned down in plan
-    steps S1.1-S1.3. Anything outside it must be zero.
+    The app authenticates with WorkOS sealed cookies; localStorage never
+    holds a token, so this pattern sends 'Authorization: Bearer null' and
+    silently breaks every call. It was eradicated in S1.1-S1.3 (11 call
+    sites across 3 templates). ZERO tolerance — use
+    credentials: 'same-origin' instead. Do not add an allowlist.
     """
-    problems = []
-    for tpl in sorted((ROOT / "templates").rglob("*.html")):
-        count = tpl.read_text().count(TOKEN_PATTERN)
-        allowed = LOCALSTORAGE_TOKEN_ALLOWLIST.get(tpl.name, 0)
-        if count > allowed:
-            problems.append(
-                f"{tpl.name}: {count} localStorage token reads (allowed {allowed}) "
-                "— the app uses cookie auth; use credentials: 'same-origin' instead"
-            )
-        elif count < allowed:
-            problems.append(
-                f"{tpl.name}: {count} reads but allowlist says {allowed} — good fix! "
-                "Lower LOCALSTORAGE_TOKEN_ALLOWLIST in the same commit to lock it in"
-            )
-    assert not problems, "\n".join(problems)
+    offenders = [
+        f"{tpl.name}: {tpl.read_text().count(TOKEN_PATTERN)} occurrence(s)"
+        for tpl in sorted((ROOT / "templates").rglob("*.html"))
+        if TOKEN_PATTERN in tpl.read_text()
+    ]
+    assert not offenders, (
+        "The dead localStorage-Bearer pattern is back:\n" + "\n".join(offenders)
+    )
 
 
 def test_session_refresh_middleware_registered():
