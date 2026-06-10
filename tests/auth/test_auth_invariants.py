@@ -21,9 +21,7 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 # - A count DECREASE means you fixed some: lower the number here in the
 #   same commit so the ratchet stays tight.
 # ---------------------------------------------------------------------------
-LOCALSTORAGE_TOKEN_ALLOWLIST = {
-    "history.html": 1,
-}
+LOCALSTORAGE_TOKEN_ALLOWLIST = {}
 
 TOKEN_PATTERN = "localStorage.getItem('access_token')"
 
