@@ -451,11 +451,8 @@
 
         async function loadJobs() {
             try {
-                const token = localStorage.getItem('access_token');
                 const response = await fetch('/api/jobs/', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+                    credentials: 'same-origin'
                 });
 
                 if (response.ok) {
@@ -471,11 +468,8 @@
 
         async function loadStats() {
             try {
-                const token = localStorage.getItem('access_token');
                 const response = await fetch('/api/jobs/stats/summary', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+                    credentials: 'same-origin'
                 });
 
                 if (response.ok) {
@@ -639,12 +633,9 @@
             if (!confirm('Are you sure you want to cancel this job?')) return;
 
             try {
-                const token = localStorage.getItem('access_token');
                 const response = await fetch(`/api/jobs/${jobId}/cancel`, {
                     method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+                    credentials: 'same-origin'
                 });
 
                 if (response.ok) {
@@ -663,12 +654,9 @@
             if (!confirm('Are you sure you want to delete this job from history?')) return;
 
             try {
-                const token = localStorage.getItem('access_token');
                 const response = await fetch(`/api/jobs/${jobId}`, {
                     method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+                    credentials: 'same-origin'
                 });
 
                 if (response.ok) {

@@ -22,7 +22,6 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 #   same commit so the ratchet stays tight.
 # ---------------------------------------------------------------------------
 LOCALSTORAGE_TOKEN_ALLOWLIST = {
-    "jobs.html": 4,
     "history.html": 1,
 }
 
