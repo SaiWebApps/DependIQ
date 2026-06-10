@@ -53,7 +53,7 @@
     <div class="flex items-center justify-between mb-6">
         <h1 class="text-slate-50 text-2xl font-semibold">Your Workspaces</h1>
         <button
-            @click="createWorkspace()"
+            @click="creating = true; $nextTick(() => $refs.newNameInput.focus())"
             class="inline-flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white font-medium px-4 py-2.5 rounded-lg transition-colors duration-150"
         >
             <span class="material-icons text-lg">add</span>
@@ -61,8 +61,33 @@
         </button>
     </div>
 
-    <!-- Inline Create Form (hidden by default, shown via HTMX response) -->
-    <div id="create-form-area"></div>
+    <!-- Inline Create Form -->
+    <div id="create-form-area" x-show="creating" x-cloak class="mb-6">
+        <div class="flex items-center gap-3 bg-slate-800 border border-indigo-500/50 rounded-xl p-4">
+            <input
+                x-ref="newNameInput"
+                x-model="newName"
+                @keydown.enter="createWorkspace()"
+                @keydown.escape="creating = false; newName = ''"
+                type="text"
+                placeholder="Workspace name (e.g. prod-services)"
+                class="flex-1 bg-slate-700 border border-slate-600 focus:border-indigo-500 text-slate-50 rounded-lg px-3 py-2 text-sm outline-none"
+            >
+            <button
+                @click="createWorkspace()"
+                :disabled="!newName.trim()"
+                class="bg-indigo-500 hover:bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors duration-150"
+            >
+                Create
+            </button>
+            <button
+                @click="creating = false; newName = ''"
+                class="text-slate-400 hover:text-slate-200 px-2 py-2 text-sm transition-colors duration-150"
+            >
+                Cancel
+            </button>
+        </div>
+    </div>
 
     <!-- Workspace Grid -->
     <div id="workspace-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -140,7 +165,7 @@
         </div>
 
         <button
-            @click="createWorkspace()"
+            @click="creating = true; $nextTick(() => $refs.newNameInput.focus())"
             class="inline-flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white font-medium px-6 py-3 rounded-lg transition-colors duration-150"
         >
             <span class="material-icons text-lg">add</span>
@@ -155,19 +180,27 @@
 <script>
 function workspacesApp() {
     return {
+        creating: false,
+        newName: '',
+
         async createWorkspace() {
+            const name = this.newName.trim();
+            if (!name) return;
             try {
                 const response = await fetch('/api/workspaces', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'same-origin',
-                    body: JSON.stringify({})
+                    body: JSON.stringify({ name: name })
                 });
 
                 if (!response.ok) {
-                    alert('Failed to create workspace');
+                    alert('Failed to create workspace (HTTP ' + response.status + ')');
                     return;
                 }
+
+                this.creating = false;
+                this.newName = '';
 
                 const ws = await response.json();
 

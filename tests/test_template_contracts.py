@@ -42,10 +42,9 @@ KNOWN_MISSING_ROUTES = {
      "/api/github/repository/${repo.owner.login}/${repo.name}?session=${sessionId}"),
 }
 
-# Ratchet: fetch calls sending an empty JSON body. workspaces.html's
-# createWorkspace() posts {} to an endpoint requiring {"name": str} -> 422.
-# Plan step S2.1 zeroes this.
-EMPTY_BODY_ALLOWLIST = {"workspaces.html": 1}
+# Ratchet: fetch calls sending an empty JSON body. Was {"workspaces.html": 1}
+# (the shipped 422 bug) until S2.1 fixed it. Keep empty.
+EMPTY_BODY_ALLOWLIST: dict[str, int] = {}
 
 
 def _template_fetches():
