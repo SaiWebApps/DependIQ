@@ -77,6 +77,9 @@ clean:
 auth-check:
 	@./scripts/auth_check.sh $(BASE_URL)
 
+neo4j-check: _check-uv
+	@$(UV) run python scripts/neo4j_check.py
+
 # === Database schema ===
 
 migrate: _check-uv _ensure-db
